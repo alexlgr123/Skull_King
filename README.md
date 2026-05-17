@@ -1,2 +1,2 @@
 # Skull_King
-Web server for counting scores at Skull King
+Page web permettant de calculer les scores du jeu de plateau Skull-King.
