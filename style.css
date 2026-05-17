@@ -96,6 +96,11 @@
     margin-bottom: 4px;
     display: block;
   }
+  .player-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0008a5;
+  }
   select, input[type="number"], input[type="text"] {
     width: 100%;
     padding: 10px;

@@ -214,7 +214,7 @@ function champsPariPlis() {
     return `
     <div class="row joueur-block">
       <div>
-        <label for="bet_${i}">${p} - Pari</label>
+        <label for="bet_${i}"><span class="player-name">${p}</span> - Pari</label>
         <input type="number" id="bet_${i}" min="0" max="${nbPlis}" value="0" class="input-small" />
       </div>
       <div>
