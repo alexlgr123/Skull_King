@@ -213,8 +213,9 @@ function champsPariPlis() {
       }).join('');
     return `
     <div class="row joueur-block">
+      <div class="player-heading">${p}</div>
       <div>
-        <label for="bet_${i}"><span class="player-name">${p}</span> - Pari</label>
+        <label for="bet_${i}">Pari</label>
         <input type="number" id="bet_${i}" min="0" max="${nbPlis}" value="0" class="input-small" />
       </div>
       <div>

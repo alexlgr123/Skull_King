@@ -41,6 +41,13 @@
   .joueur-block {
     margin-bottom: 0;
   }
+  .player-heading {
+    grid-column: 1 / -1;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0008a5;
+    margin-bottom: 2px;
+  }
   .input-small {
     width: 60px !important;
   }
@@ -95,11 +102,6 @@
     color: #eaf6ee;
     margin-bottom: 4px;
     display: block;
-  }
-  .player-name {
-    font-size: 18px;
-    font-weight: 700;
-    color: #0008a5;
   }
   select, input[type="number"], input[type="text"] {
     width: 100%;
