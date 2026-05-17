@@ -232,7 +232,7 @@ function champsPariPlis() {
         <div id="alliances_${i}">${checkboxes}</div>
       </div>
       <div>
-        <label for="extra_bet_${i}">Pari supplémentaire</label>
+        <label for="extra_bet_${i}">Pari Flambeur</label>
         <input type="number" id="extra_bet_${i}" min="0" max="20" step="10" value="0" class="input-small" />
       </div>
       <div class="rascal-only">
