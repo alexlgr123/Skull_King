@@ -13,7 +13,7 @@
       <h2>Manche Skull King</h2>
       <div class="grid">
         <div>
-          <label for="playersInput">Joueurs (2 à 8)</label>
+          <label for="playersInput">Joueurs (2 à 20)</label>
           <input type="text" id="playersInput" placeholder="alex, cathy, marion, philippe" value="alex, cathy, marion, philippe" title="Entrez les noms des joueurs séparés par des virgules" aria-label="Liste des joueurs" />
         </div>
         <div>
@@ -96,8 +96,8 @@
     function majJoueursDepuisChamp() {
       const brut = document.getElementById('playersInput').value.trim();
       const liste = brut.split(',').map(s => s.trim()).filter(Boolean);
-      if (liste.length < 2 || liste.length > 8) {
-        alert('Veuillez entrer 2 à 8 joueurs, séparés par des virgules.');
+      if (liste.length < 2 || liste.length > 20) {
+        alert('Veuillez entrer 2 à 20 joueurs, séparés par des virgules.');
         return;
       }
       etat.joueurs = liste;
