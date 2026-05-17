@@ -139,11 +139,13 @@
     width: 60px;
     height: 90px;
     border-radius: 8px;
-    background:
-      linear-gradient(145deg, rgba(255,255,255,0.2), rgba(0,0,0,0.15)),
-      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="90"><rect width="60" height="90" rx="8" ry="8" fill="%23fff"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="42" font-family="serif">♚</text></svg>');
-    background-size: cover;
+    background: linear-gradient(145deg, rgba(255,255,255,0.2), rgba(0,0,0,0.15)), #1a1a1a;
     border: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    line-height: 1;
   }
   .convert {
     margin-left: auto;
