@@ -23,6 +23,8 @@ function initTooltips() {
       }
       
       this.__tooltipTimer = setTimeout(() => {
+        // Ajuster la position AVANT d'afficher le tooltip
+        adjustTooltipPosition(this);
         this.classList.add('show-tooltip');
       }, 500);
     });
@@ -36,8 +38,35 @@ function initTooltips() {
       
       // Toujours supprimer la classe pour masquer le tooltip
       this.classList.remove('show-tooltip');
+      this.classList.remove('tooltip-left');
+      this.classList.remove('tooltip-right');
     });
   });
+}
+
+// Ajuste la position du tooltip si elle dépasse l'écran
+function adjustTooltipPosition(element) {
+  const rect = element.getBoundingClientRect();
+  const elementWidth = rect.width;
+  const elementLeft = rect.left;
+  const elementCenter = elementLeft + elementWidth / 2;
+  const tooltipWidth = 400;
+  const tooltipLeftEdge = elementCenter - tooltipWidth / 2;
+  const tooltipRightEdge = elementCenter + tooltipWidth / 2;
+  const windowWidth = window.innerWidth;
+  
+  // Retirer les classes de décalage précédentes
+  element.classList.remove('tooltip-left');
+  element.classList.remove('tooltip-right');
+  
+  // Vérifier si le tooltip dépasse à gauche
+  if (tooltipLeftEdge < 10) {
+    element.classList.add('tooltip-right');
+  }
+  // Vérifier si le tooltip dépasse à droite
+  else if (tooltipRightEdge > windowWidth - 10) {
+    element.classList.add('tooltip-left');
+  }
 }
 
 // Initialiser les tooltips au chargement et à chaque modification DOM

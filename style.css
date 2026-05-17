@@ -27,11 +27,14 @@
       transform: translateX(-50%);
       background: #0008a5;
       color: #ffd74a;
-      padding: 8px 12px;
+      padding: 10px 15px;
       border-radius: 8px;
-      font-size: 12px;
+      font-size: 13px;
       white-space: normal;
-      max-width: 200px;
+      width: 400px;
+      max-width: 250px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
       text-align: center;
       pointer-events: none;
       opacity: 0;
@@ -55,6 +58,28 @@
     [data-tooltip].show-tooltip::before,
     [data-tooltip].show-tooltip::after {
       opacity: 1;
+    }
+
+    /* Repositionnement du tooltip à gauche si près du bord droit */
+    [data-tooltip].tooltip-left::before {
+      left: auto;
+      right: 0;
+      transform: none;
+    }
+    [data-tooltip].tooltip-left::after {
+      left: auto;
+      right: 6px;
+      transform: none;
+    }
+
+    /* Repositionnement du tooltip à droite si près du bord gauche */
+    [data-tooltip].tooltip-right::before {
+      left: 0;
+      transform: none;
+    }
+    [data-tooltip].tooltip-right::after {
+      left: 6px;
+      transform: none;
     }
 
   /* Pour le titre du tableau */
