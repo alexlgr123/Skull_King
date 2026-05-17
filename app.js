@@ -36,6 +36,9 @@ function majTableau() {
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
   const modeActuel = document.getElementById('modeScore').value;
+  const cumulsModeActuel = new Array(etat.joueurs.length).fill(0);
+  const cumulsSkullKing = new Array(etat.joueurs.length).fill(0);
+  const cumulsRascal = new Array(etat.joueurs.length).fill(0);
   // Affichage en colonnes : chaque colonne = joueur, chaque ligne = manche
   for (let idx = 0; idx < etat.manches.length; idx++) {
     const manche = etat.manches[idx];
@@ -44,9 +47,18 @@ function majTableau() {
     const scoresSkullKing = affichageDoubleScores ? calculerScoresSelonMode(dataManche, 'skullking', mancheNum) : null;
     const scoresRascal = affichageDoubleScores ? calculerScoresSelonMode(dataManche, 'rascal', mancheNum) : null;
     const tr = document.createElement('tr');
+    const scoresMancheActuelle = modeActuel === 'rascal'
+      ? (scoresRascal || manche.scores)
+      : (scoresSkullKing || manche.scores);
+    const totalMancheActuelle = scoresMancheActuelle.reduce((acc, val) => acc + val, 0);
+    const totalMancheSkullKing = scoresSkullKing ? scoresSkullKing.reduce((acc, val) => acc + val, 0) : null;
+    const totalMancheRascal = scoresRascal ? scoresRascal.reduce((acc, val) => acc + val, 0) : null;
+
     // Colonne 0 : numéro de manche
     const details = document.createElement('td');
-    details.innerHTML = `<span class="pill">${idx + 1}</span>`;
+    details.innerHTML = affichageDoubleScores
+      ? `<span class="pill">${idx + 1}</span> <span class="pill">Total SK: ${totalMancheSkullKing}</span> <span class="pill">Total Rascal: ${totalMancheRascal}</span>`
+      : `<span class="pill">${idx + 1}</span> <span class="pill">Total manche: ${totalMancheActuelle}</span>`;
     tr.appendChild(details);
     // Colonnes suivantes : score du joueur pour cette manche
     for (let i = 0; i < etat.joueurs.length; i++) {
@@ -66,9 +78,15 @@ function majTableau() {
       const scoreActuel = modeActuel === 'rascal'
         ? (scoresRascal ? scoresRascal[i] : manche.scores[i])
         : (scoresSkullKing ? scoresSkullKing[i] : manche.scores[i]);
+      if (affichageDoubleScores) {
+        cumulsSkullKing[i] += scoresSkullKing[i];
+        cumulsRascal[i] += scoresRascal[i];
+      } else {
+        cumulsModeActuel[i] += scoreActuel;
+      }
       const scoreInfo = affichageDoubleScores
-        ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span>`
-        : `<span class="pill">Score: ${scoreActuel > 0 ? '+' + scoreActuel : scoreActuel}</span>`;
+        ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span> <span class="pill">Cumul SK: ${cumulsSkullKing[i] > 0 ? '+' + cumulsSkullKing[i] : cumulsSkullKing[i]}</span> <span class="pill">Cumul Rascal: ${cumulsRascal[i] > 0 ? '+' + cumulsRascal[i] : cumulsRascal[i]}</span>`
+        : `<span class="pill">Score: ${scoreActuel > 0 ? '+' + scoreActuel : scoreActuel}</span> <span class="pill">Cumul: ${cumulsModeActuel[i] > 0 ? '+' + cumulsModeActuel[i] : cumulsModeActuel[i]}</span>`;
       td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${allianceInfo} ${scoreInfo}`;
       tr.appendChild(td);
     }
