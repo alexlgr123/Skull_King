@@ -7,6 +7,46 @@ const etat = {
 
 let affichageDoubleScores = false;
 
+// --- Gestion des tooltips avec délai de 2 secondes ---
+function initTooltips() {
+  const elementsAvecTooltip = document.querySelectorAll('[data-tooltip]');
+  elementsAvecTooltip.forEach(element => {
+    // Éviter l'ajout de listeners dupliqués
+    if (element.__tooltipInitialized) {
+      return;
+    }
+    element.__tooltipInitialized = true;
+    
+    element.addEventListener('mouseenter', function() {
+      // Annuler le timeout existant s'il y en a un
+      if (this.__tooltipTimer) {
+        clearTimeout(this.__tooltipTimer);
+      }
+      
+      this.__tooltipTimer = setTimeout(() => {
+        this.classList.add('show-tooltip');
+      }, 500);
+    });
+    
+    element.addEventListener('mouseleave', function() {
+      // Annuler le timeout pour éviter l'affichage du tooltip
+      if (this.__tooltipTimer) {
+        clearTimeout(this.__tooltipTimer);
+        this.__tooltipTimer = null;
+      }
+      
+      // Toujours supprimer la classe pour masquer le tooltip
+      this.classList.remove('show-tooltip');
+    });
+  });
+}
+
+// Initialiser les tooltips au chargement et à chaque modification DOM
+document.addEventListener('DOMContentLoaded', initTooltips);
+const observer = new MutationObserver(initTooltips);
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Met à jour la liste des joueurs à partir du champ texte
 // Met à jour la liste des joueurs à partir du champ texte
 function majJoueursDepuisChamp() {
   const brut = document.getElementById('playersInput').value.trim();
@@ -209,22 +249,22 @@ function champsPariPlis() {
         if (idx === i) {
           return '';
         }
-        return `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${idx}' id='alliance_${i}_${idx}' /> ${nom}</label>`;
+        return `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${idx}' id='alliance_${i}_${idx}' data-tooltip="Cochez pour former une alliance avec ${nom}" /> ${nom}</label>`;
       }).join('');
     return `
     <div class="row joueur-block">
       <div class="player-heading">${p}</div>
       <div>
         <label for="bet_${i}">Pari</label>
-        <input type="number" id="bet_${i}" min="0" max="${nbPlis}" value="0" class="input-small" />
+        <input type="number" id="bet_${i}" min="0" max="${nbPlis}" value="0" class="input-small" data-tooltip="Annoncez le nombre de plis que vous allez remporter (de 0 à ${nbPlis})" />
       </div>
       <div>
         <label for="tricks_${i}">Plis remportés</label>
-        <input type="number" id="tricks_${i}" min="0" max="${nbPlis}" value="0" class="input-small" />
+        <input type="number" id="tricks_${i}" min="0" max="${nbPlis}" value="0" class="input-small" data-tooltip="Entrez le nombre de plis réellement remportés pendant cette manche" />
       </div>
       <div>
         <label for="bonus_${i}">Bonus</label>
-        <input type="number" id="bonus_${i}" value="0" class="input-small" />
+        <input type="number" id="bonus_${i}" value="0" class="input-small" data-tooltip="Bonus de points à ajouter au score (ex: action spéciale, événement)" />
       </div>
       
       <div>
@@ -233,11 +273,11 @@ function champsPariPlis() {
       </div>
       <div>
         <label for="extra_bet_${i}">Pari Flambeur</label>
-        <input type="number" id="extra_bet_${i}" min="0" max="20" step="10" value="0" class="input-small" />
+        <input type="number" id="extra_bet_${i}" min="0" max="20" step="10" value="0" class="input-small" data-tooltip="Pari supplémentaire: gagnez des points bonus si votre pari est exact (Skull King seulement)" />
       </div>
       <div class="rascal-only">
         <label class="alliance-label">
-          <input type="checkbox" id="boulet_canon_${i}" /> Boulet de canon
+          <input type="checkbox" id="boulet_canon_${i}" data-tooltip="Mode Rascal: gagnez 15 pts si vous remportez exactement le nombre annoncé, 0 sinon" /> Boulet de canon
         </label>
       </div>
     </div>

@@ -15,6 +15,48 @@
     display: none;
   }
 
+    /* Tooltips avec délai de 2 secondes au survol */
+    [data-tooltip] {
+      position: relative;
+    }
+    [data-tooltip]::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0008a5;
+      color: #ffd74a;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      white-space: normal;
+      max-width: 200px;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    [data-tooltip]::after {
+      content: '';
+      position: absolute;
+      bottom: 105%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #0008a5;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 1000;
+    }
+    [data-tooltip].show-tooltip::before,
+    [data-tooltip].show-tooltip::after {
+      opacity: 1;
+    }
+
   /* Pour le titre du tableau */
   .table-title {
     font-weight: 700;

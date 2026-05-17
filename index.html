@@ -14,11 +14,11 @@
       <div class="grid">
         <div>
           <label for="playersInput">Joueurs (2 à 20)</label>
-          <input type="text" id="playersInput" placeholder="alex, cathy, marion, philippe" value="alex, cathy, marion, philippe" title="Entrez les noms des joueurs séparés par des virgules" aria-label="Liste des joueurs" />
+            <input type="text" id="playersInput" placeholder="alex, cathy, marion, philippe" value="alex, cathy, marion, philippe" data-tooltip="Entrez les noms des joueurs séparés par des virgules. Exemple: alex, cathy, marion" aria-label="Liste des joueurs" />
         </div>
         <div>
           <label for="modeScore">Mode de score</label>
-          <select id="modeScore">
+            <select id="modeScore" data-tooltip="Skull King: 20 pts pour l'exact, -10 par différence. Rascal: 10×manche + bonus">
             <option value="skullking">Skull King</option>
             <option value="rascal">Rascal</option>
           </select>
@@ -28,16 +28,16 @@
           <div id="betsTricksFields"></div>
         </form>
         <div class="controls">
-          <button id="calcBtn">Aperçu des scores</button>
-          <button class="secondary" id="addRowBtn">Ajouter la manche</button>
-          <button class="secondary" id="dualScoresBtn" type="button">Voir les 2 scores</button>
-          <button class="danger" id="resetBtn">Réinitialiser</button>
+           <button id="calcBtn" data-tooltip="Affiche un aperçu des scores sans l'ajouter au tableau des scores">Aperçu des scores</button>
+           <button class="secondary" id="addRowBtn" data-tooltip="Enregistre la manche actuelle dans le tableau des résultats">Ajouter la manche</button>
+           <button class="secondary" id="dualScoresBtn" type="button" data-tooltip="Bascule l'affichage entre Skull King, Rascal, ou les deux modes simultanément">Voir les 2 scores</button>
+           <button class="danger" id="resetBtn" data-tooltip="Réinitialise tous les paris et plis de la manche actuelle (attention: irréversible)">Réinitialiser</button>
         </div>
         <div class="controls">
-          <button id="saveBtn" type="button">Sauvegarder la partie</button>
+           <button id="saveBtn" type="button" data-tooltip="Télécharge la partie actuelle en fichier JSON pour la reprendre plus tard">Sauvegarder la partie</button>
           <label for="loadInput" class="visually-hidden">Charger une partie (JSON)</label>
           <input type="file" id="loadInput" accept="application/json" class="hidden-input" title="Charger une partie (JSON)" />
-          <button id="loadBtn" type="button">Charger une partie</button>
+           <button id="loadBtn" type="button" data-tooltip="Importe une partie précédemment sauvegardée (fichier JSON)">Charger une partie</button>
         </div>
 
       </div>
