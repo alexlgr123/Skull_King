@@ -1,12 +1,11 @@
 // --- État global du tableau ---
 const etat = {
-  joueurs: ['Alex', 'Cathy', 'Marion', 'Philippe'], // Valeur par défaut, remplacée dès la saisie
+  joueurs: ['Player1', 'P2', 'P3', 'P4'], // Valeur par défaut, remplacée dès la saisie
   totaux: [0, 0, 0, 0],
   manches: []
 };
 
-let affichageDoubleScores = false;
-
+let affichageDoubleScores = false;let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
 // --- Gestion des tooltips avec délai de 2 secondes ---
 function initTooltips() {
   const elementsAvecTooltip = document.querySelectorAll('[data-tooltip]');
@@ -492,6 +491,14 @@ majEntetes();
 majTotaux();
 champsPariPlis();
 
+// Event listener pour sélectionner les joueurs au premier clic après chargement/réinitialisation
+document.getElementById('playersInput').addEventListener('click', function() {
+  if (selectPlayersOnClick) {
+    this.select();
+    selectPlayersOnClick = false;
+  }
+});
+
 // --- Événements UI ---
 document.getElementById('playersInput').addEventListener('change', majJoueursDepuisChamp);
 document.getElementById('modeScore').addEventListener('change', () => {
@@ -579,6 +586,8 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
 document.getElementById('resetBtn').addEventListener('click', () => {
   reinitialiserTout();
   champsPariPlis();
+  // Réactive le flag de sélection pour le prochain clic
+  selectPlayersOnClick = true;
 });
 
 // --- Sauvegarde et chargement de partie ---
@@ -634,6 +643,8 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
       majTableau();
       majTotaux();
       champsPariPlis();
+      // Réactive le flag de sélection pour le prochain clic
+      selectPlayersOnClick = true;
     } catch (err) {
       alert('Erreur lors du chargement de la partie : ' + err.message);
     }
