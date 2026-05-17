@@ -5,6 +5,8 @@ const etat = {
   manches: []
 };
 
+let affichageDoubleScores = false;
+
 // Met à jour la liste des joueurs à partir du champ texte
 function majJoueursDepuisChamp() {
   const brut = document.getElementById('playersInput').value.trim();
@@ -33,9 +35,14 @@ function majEntetes() {
 function majTableau() {
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
+  const modeActuel = document.getElementById('modeScore').value;
   // Affichage en colonnes : chaque colonne = joueur, chaque ligne = manche
   for (let idx = 0; idx < etat.manches.length; idx++) {
     const manche = etat.manches[idx];
+    const mancheNum = idx + 1;
+    const dataManche = normaliserDonneesScore(manche);
+    const scoresSkullKing = affichageDoubleScores ? calculerScoresSelonMode(dataManche, 'skullking', mancheNum) : null;
+    const scoresRascal = affichageDoubleScores ? calculerScoresSelonMode(dataManche, 'rascal', mancheNum) : null;
     const tr = document.createElement('tr');
     // Colonne 0 : numéro de manche
     const details = document.createElement('td');
@@ -56,7 +63,13 @@ function majTableau() {
       if (manche.extraBets && typeof manche.extraBets[i] !== 'undefined' && manche.extraBets[i] > 0) {
         extraBetInfo = `<span class="pill">Pari supp.: ${manche.extraBets[i]}</span>`;
       }
-      td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${allianceInfo} <span class="pill">Score: ${manche.scores[i] > 0 ? '+' + manche.scores[i] : manche.scores[i]}</span>`;
+      const scoreActuel = modeActuel === 'rascal'
+        ? (scoresRascal ? scoresRascal[i] : manche.scores[i])
+        : (scoresSkullKing ? scoresSkullKing[i] : manche.scores[i]);
+      const scoreInfo = affichageDoubleScores
+        ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span>`
+        : `<span class="pill">Score: ${scoreActuel > 0 ? '+' + scoreActuel : scoreActuel}</span>`;
+      td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${allianceInfo} ${scoreInfo}`;
       tr.appendChild(td);
     }
     tbody.appendChild(tr);
@@ -66,6 +79,29 @@ function majTableau() {
 // Met à jour les totaux de chaque joueur
 function majTotaux() {
   const totalsWrap = document.getElementById('totals');
+  if (affichageDoubleScores) {
+    const totauxSkullKing = new Array(etat.joueurs.length).fill(0);
+    const totauxRascal = new Array(etat.joueurs.length).fill(0);
+
+    for (let idx = 0; idx < etat.manches.length; idx++) {
+      const manche = etat.manches[idx];
+      const mancheNum = idx + 1;
+      const dataManche = normaliserDonneesScore(manche);
+      const scoresSkullKing = calculerScoresSelonMode(dataManche, 'skullking', mancheNum);
+      const scoresRascal = calculerScoresSelonMode(dataManche, 'rascal', mancheNum);
+
+      for (let i = 0; i < etat.joueurs.length; i++) {
+        totauxSkullKing[i] += scoresSkullKing[i];
+        totauxRascal[i] += scoresRascal[i];
+      }
+    }
+
+    totalsWrap.innerHTML = etat.joueurs.map((p, i) =>
+      `<div class="total-box"><div class="sub">${p}</div><div>Skull King: ${totauxSkullKing[i]}</div><div>Rascal: ${totauxRascal[i]}</div></div>`
+    ).join('');
+    return;
+  }
+
   totalsWrap.innerHTML = etat.joueurs.map((p, i) =>
     `<div class="total-box"><div class="sub">${p}</div><div id="tot${i + 1}">${etat.totaux[i]}</div></div>`
   ).join('');
@@ -251,18 +287,41 @@ function scoreRascal(pari, plis, nbPlis, bonus, allianceBonus) {
   return 0;
 }
 
-// Calcule les scores de la manche courante selon le mode choisi
-function calculerScores() {
-  const f = lireFormulaire();
-  const mode = document.getElementById('modeScore').value;
+function normaliserDonneesScore(source) {
+  const taille = etat.joueurs.length;
+  const paris = Array.isArray(source.paris) ? source.paris.slice(0, taille) : [];
+  const plis = Array.isArray(source.plis) ? source.plis.slice(0, taille) : [];
+  const bonus = Array.isArray(source.bonus) ? source.bonus.slice(0, taille) : [];
+  const alliances = Array.isArray(source.alliances) ? source.alliances.slice(0, taille) : [];
+  const extraBets = Array.isArray(source.extraBets) ? source.extraBets.slice(0, taille) : [];
+
+  while (paris.length < taille) {
+    paris.push(0);
+  }
+  while (plis.length < taille) {
+    plis.push(0);
+  }
+  while (bonus.length < taille) {
+    bonus.push(0);
+  }
+  while (alliances.length < taille) {
+    alliances.push([]);
+  }
+  while (extraBets.length < taille) {
+    extraBets.push(0);
+  }
+
+  return { paris, plis, bonus, alliances, extraBets };
+}
+
+function calculerScoresSelonMode(formData, mode, mancheNum) {
+  const f = normaliserDonneesScore(formData);
   let scores;
   let alliancesBonus = new Array(f.paris.length).fill(0);
   let extraBetBonus = new Array(f.paris.length).fill(0);
 
   if (mode === 'skullking') {
-    const mancheNum = etat.manches.length + 1;
     scores = f.paris.map((pari, i) => scoreSkullKing(pari, f.plis[i], mancheNum) + f.bonus[i]);
-    // Alliances
     const dejaCompte = new Set();
     for (let i = 0; i < f.paris.length; i++) {
       if (!Array.isArray(f.alliances[i])) {
@@ -285,43 +344,46 @@ function calculerScores() {
         }
       });
     }
-    // Pari supplémentaire
     for (let i = 0; i < f.paris.length; i++) {
       if (f.extraBets[i] > 0 && f.paris[i] === f.plis[i]) {
         extraBetBonus[i] = f.extraBets[i];
       }
     }
-    scores = scores.map((s, i) => s + alliancesBonus[i] + extraBetBonus[i]);
-  } else {
-    // Mode Rascal : points selon la précision, bonus appliqué selon l'écart
-    const nbPlis = etat.manches.length + 1;
-    // Calcul des bonus d'alliance
-    alliancesBonus = new Array(f.paris.length).fill(0);
-    const dejaCompte = new Set();
-    for (let i = 0; i < f.paris.length; i++) {
-      if (!Array.isArray(f.alliances[i])) {
-        continue;
-      }
-      f.alliances[i].forEach(allyIdx => {
-        if (allyIdx === i) {
-          return;
-        }
-        const key = i < allyIdx ? `${i}-${allyIdx}` : `${allyIdx}-${i}`;
-        if (dejaCompte.has(key)) {
-          return;
-        }
-        if (Array.isArray(f.alliances[allyIdx]) && f.alliances[allyIdx].includes(i)) {
-          if (f.paris[i] === f.plis[i] && f.paris[allyIdx] === f.plis[allyIdx]) {
-            alliancesBonus[i] += 20;
-            alliancesBonus[allyIdx] += 20;
-            dejaCompte.add(key);
-          }
-        }
-      });
-    }
-    // Passe le bonus d'alliance à la fonction scoreRascal
-    scores = f.paris.map((pari, i) => scoreRascal(pari, f.plis[i], nbPlis, f.bonus[i], alliancesBonus[i]));
+    return scores.map((s, i) => s + alliancesBonus[i] + extraBetBonus[i]);
   }
+
+  const dejaCompte = new Set();
+  for (let i = 0; i < f.paris.length; i++) {
+    if (!Array.isArray(f.alliances[i])) {
+      continue;
+    }
+    f.alliances[i].forEach(allyIdx => {
+      if (allyIdx === i) {
+        return;
+      }
+      const key = i < allyIdx ? `${i}-${allyIdx}` : `${allyIdx}-${i}`;
+      if (dejaCompte.has(key)) {
+        return;
+      }
+      if (Array.isArray(f.alliances[allyIdx]) && f.alliances[allyIdx].includes(i)) {
+        if (f.paris[i] === f.plis[i] && f.paris[allyIdx] === f.plis[allyIdx]) {
+          alliancesBonus[i] += 20;
+          alliancesBonus[allyIdx] += 20;
+          dejaCompte.add(key);
+        }
+      }
+    });
+  }
+  scores = f.paris.map((pari, i) => scoreRascal(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]));
+  return scores;
+}
+
+// Calcule les scores de la manche courante selon le mode choisi
+function calculerScores() {
+  const f = normaliserDonneesScore(lireFormulaire());
+  const mode = document.getElementById('modeScore').value;
+  const mancheNum = etat.manches.length + 1;
+  const scores = calculerScoresSelonMode(f, mode, mancheNum);
   return { paris: f.paris, plis: f.plis, bonus: f.bonus, alliances: f.alliances, extraBets: f.extraBets, scores };
 }
 
@@ -345,10 +407,27 @@ champsPariPlis();
 document.getElementById('playersInput').addEventListener('change', majJoueursDepuisChamp);
 document.getElementById('modeScore').addEventListener('change', majRegleScore);
 
+document.getElementById('dualScoresBtn').addEventListener('click', () => {
+  affichageDoubleScores = !affichageDoubleScores;
+  document.getElementById('dualScoresBtn').textContent = affichageDoubleScores
+    ? 'Masquer les 2 scores'
+    : 'Voir les 2 scores';
+  majTableau();
+  majTotaux();
+});
+
 // Affiche un aperçu des scores calculés sans les ajouter au tableau
 document.getElementById('calcBtn').addEventListener('click', () => {
   try {
-    const c = calculerScores();
+    const mode = document.getElementById('modeScore').value;
+    const f = normaliserDonneesScore(lireFormulaire());
+    const mancheNum = etat.manches.length + 1;
+    const c = {
+      ...f,
+      scores: calculerScoresSelonMode(f, mode, mancheNum)
+    };
+    const scoresSkullKing = affichageDoubleScores ? calculerScoresSelonMode(f, 'skullking', mancheNum) : null;
+    const scoresRascal = affichageDoubleScores ? calculerScoresSelonMode(f, 'rascal', mancheNum) : null;
     // Affiche un aperçu temporaire en haut du tableau (sans l'ajouter)
     const tbody = document.getElementById('tbody');
     const preview = document.createElement('tr');
@@ -358,7 +437,10 @@ document.getElementById('calcBtn').addEventListener('click', () => {
     preview.appendChild(td0);
     for (let i = 0; i < etat.joueurs.length; i++) {
       const td = document.createElement('td');
-      td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> <span class="pill">Score: ${c.scores[i] > 0 ? '+' + c.scores[i] : c.scores[i]}</span>`;
+      const scoreInfo = affichageDoubleScores
+        ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span>`
+        : `<span class="pill">Score: ${c.scores[i] > 0 ? '+' + c.scores[i] : c.scores[i]}</span>`;
+      td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> ${scoreInfo}`;
       preview.appendChild(td);
     }
     // Nettoie le dernier aperçu
