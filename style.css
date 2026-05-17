@@ -25,6 +25,12 @@
     display: block;
     margin-bottom: 2px;
   }
+  .rascal-only {
+    display: block;
+  }
+  body[data-mode="skullking"] .rascal-only {
+    display: none;
+  }
   /* Séparateur visuel entre chaque joueur dans le formulaire */
   .joueur-separateur {
     border: none;

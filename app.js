@@ -75,6 +75,10 @@ function majTableau() {
       if (manche.extraBets && typeof manche.extraBets[i] !== 'undefined' && manche.extraBets[i] > 0) {
         extraBetInfo = `<span class="pill">Pari supp.: ${manche.extraBets[i]}</span>`;
       }
+      let bouletCanonInfo = '';
+      if (manche.bouletCanon && manche.bouletCanon[i]) {
+        bouletCanonInfo = `<span class="pill">Boulet de canon</span>`;
+      }
       const scoreActuel = modeActuel === 'rascal'
         ? (scoresRascal ? scoresRascal[i] : manche.scores[i])
         : (scoresSkullKing ? scoresSkullKing[i] : manche.scores[i]);
@@ -87,7 +91,7 @@ function majTableau() {
       const scoreInfo = affichageDoubleScores
         ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span> <span class="pill">Cumul SK: ${cumulsSkullKing[i] > 0 ? '+' + cumulsSkullKing[i] : cumulsSkullKing[i]}</span> <span class="pill">Cumul Rascal: ${cumulsRascal[i] > 0 ? '+' + cumulsRascal[i] : cumulsRascal[i]}</span>`
         : `<span class="pill">Score: ${scoreActuel > 0 ? '+' + scoreActuel : scoreActuel}</span> <span class="pill">Cumul: ${cumulsModeActuel[i] > 0 ? '+' + cumulsModeActuel[i] : cumulsModeActuel[i]}</span>`;
-      td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${allianceInfo} ${scoreInfo}`;
+      td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${bouletCanonInfo} ${allianceInfo} ${scoreInfo}`;
       tr.appendChild(td);
     }
     tbody.appendChild(tr);
@@ -186,6 +190,9 @@ function champsPariPlis() {
   const numManche = etat.manches.length + 1;
   const maxManches = 10;
   const nbPlis = numManche;
+  const mode = document.getElementById('modeScore').value;
+
+  document.body.dataset.mode = mode;
 
   // Affichage du numéro de manche et du nombre de plis
   if (numManche > maxManches) {
@@ -218,6 +225,7 @@ function champsPariPlis() {
         <label for="bonus_${i}">Bonus</label>
         <input type="number" id="bonus_${i}" value="0" class="input-small" />
       </div>
+      
       <div>
         <label>Alliances</label>
         <div id="alliances_${i}">${checkboxes}</div>
@@ -225,6 +233,11 @@ function champsPariPlis() {
       <div>
         <label for="extra_bet_${i}">Pari supplémentaire</label>
         <input type="number" id="extra_bet_${i}" min="0" max="20" step="10" value="0" class="input-small" />
+      </div>
+      <div class="rascal-only">
+        <label class="alliance-label">
+          <input type="checkbox" id="boulet_canon_${i}" /> Boulet de canon
+        </label>
       </div>
     </div>
     <hr class="joueur-separateur" />
@@ -261,16 +274,18 @@ function lireFormulaire() {
   const bonus = [];
   const alliances = [];
   const extraBets = [];
+  const bouletCanon = [];
   for (let i = 0; i < etat.joueurs.length; i++) {
     paris.push(Number(document.getElementById(`bet_${i}`).value));
     plis.push(Number(document.getElementById(`tricks_${i}`).value));
     bonus.push(Number(document.getElementById(`bonus_${i}`).value));
     extraBets.push(Number(document.getElementById(`extra_bet_${i}`).value));
+    bouletCanon.push(Boolean(document.getElementById(`boulet_canon_${i}`)?.checked));
     // Récupère toutes les alliances cochées pour ce joueur
     const checked = Array.from(document.querySelectorAll(`#alliances_${i} input[type=checkbox]:checked`)).map(cb => Number(cb.value));
     alliances.push(checked);
   }
-  return { paris, plis, bonus, alliances, extraBets };
+  return { paris, plis, bonus, alliances, extraBets, bouletCanon };
 }
 
 // Calcule le score Skull King pour un joueur en fonction du numéro de manche
@@ -305,6 +320,10 @@ function scoreRascal(pari, plis, nbPlis, bonus, allianceBonus) {
   return 0;
 }
 
+function scoreBouletCanon(pari, plis) {
+  return pari === plis ? 15 : 0;
+}
+
 function normaliserDonneesScore(source) {
   const taille = etat.joueurs.length;
   const paris = Array.isArray(source.paris) ? source.paris.slice(0, taille) : [];
@@ -312,6 +331,7 @@ function normaliserDonneesScore(source) {
   const bonus = Array.isArray(source.bonus) ? source.bonus.slice(0, taille) : [];
   const alliances = Array.isArray(source.alliances) ? source.alliances.slice(0, taille) : [];
   const extraBets = Array.isArray(source.extraBets) ? source.extraBets.slice(0, taille) : [];
+  const bouletCanon = Array.isArray(source.bouletCanon) ? source.bouletCanon.slice(0, taille) : [];
 
   while (paris.length < taille) {
     paris.push(0);
@@ -328,8 +348,11 @@ function normaliserDonneesScore(source) {
   while (extraBets.length < taille) {
     extraBets.push(0);
   }
+  while (bouletCanon.length < taille) {
+    bouletCanon.push(false);
+  }
 
-  return { paris, plis, bonus, alliances, extraBets };
+  return { paris, plis, bonus, alliances, extraBets, bouletCanon };
 }
 
 function calculerScoresSelonMode(formData, mode, mancheNum) {
@@ -392,7 +415,13 @@ function calculerScoresSelonMode(formData, mode, mancheNum) {
       }
     });
   }
-  scores = f.paris.map((pari, i) => scoreRascal(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]));
+
+  scores = f.paris.map((pari, i) => {
+    if (f.bouletCanon[i]) {
+      return scoreBouletCanon(pari, f.plis[i]);
+    }
+    return scoreRascal(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]);
+  });
   return scores;
 }
 
@@ -409,10 +438,11 @@ function calculerScores() {
 function majRegleScore() {
   const mode = document.getElementById('modeScore').value;
   const regle = document.getElementById('regleScore');
+  document.body.dataset.mode = mode;
   if (mode === 'skullking') {
     regle.textContent = "Si vous remportez le nombre exact de plis que vous avez annoncé, vous gagnez 20 points pour chaque pli réalisé. Si vous remportez plus ou moins de plis que prévu, vous perdez 10 points pour chaque pli de différence. Vous ne gagnez pas de points pour les plis réalisés pendant cette manche. Si votre mise est sur zéro et que vous ne remportez aucun pli, votre score est de 10 points multipliés par le nombre de cartes de cette manche.";
   } else {
-    regle.textContent = 'Prédiction correcte : 10 pts + 5 pts/plis. Sinon : -5 pts par écart. Score max = 10 * nbPlis.';
+    regle.textContent = 'Prédiction correcte : 10 pts + 5 pts/plis. Sinon : -5 pts par écart. Boulet de canon : 15 pts si la prédiction est exacte, sinon 0 pt.';
   }
 }
 
@@ -423,7 +453,9 @@ champsPariPlis();
 
 // --- Événements UI ---
 document.getElementById('playersInput').addEventListener('change', majJoueursDepuisChamp);
-document.getElementById('modeScore').addEventListener('change', majRegleScore);
+document.getElementById('modeScore').addEventListener('change', () => {
+  majRegleScore();
+});
 
 document.getElementById('dualScoresBtn').addEventListener('click', () => {
   affichageDoubleScores = !affichageDoubleScores;
@@ -487,6 +519,7 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
       bonus: c.bonus,
       alliances: c.alliances,
       extraBets: c.extraBets,
+      bouletCanon: c.bouletCanon,
       scores: c.scores
     };
     // Supprime l'aperçu si présent
@@ -550,6 +583,7 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
       etat.joueurs = data.joueurs;
       etat.totaux = data.totaux;
       etat.manches = data.manches;
+      document.body.dataset.mode = document.getElementById('modeScore').value;
       // Restaure le mode de score si présent
       if (data.mode) {
         document.getElementById('modeScore').value = data.mode;
