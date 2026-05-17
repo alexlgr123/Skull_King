@@ -89,6 +89,42 @@ function reinitialiserTout() {
   majTotaux();
 }
 
+function selectionnerValeurInput(input) {
+  requestAnimationFrame(() => {
+    input.select();
+  });
+}
+
+function configurerNavigationInputs(selecteur) {
+  const inputs = Array.from(document.querySelectorAll(selecteur));
+
+  inputs.forEach((input, index) => {
+    input.addEventListener('focus', () => {
+      selectionnerValeurInput(input);
+    });
+
+    input.addEventListener('click', () => {
+      selectionnerValeurInput(input);
+    });
+
+    input.addEventListener('keydown', event => {
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const direction = event.shiftKey ? -1 : 1;
+      const nextInput = inputs[index + direction];
+
+      if (!nextInput) {
+        return;
+      }
+
+      event.preventDefault();
+      nextInput.focus();
+    });
+  });
+}
+
 // Génère les champs de pari et plis pour chaque joueur et affiche la manche en cours
 function champsPariPlis() {
   const container = document.getElementById('betsTricksFields');
@@ -140,6 +176,9 @@ function champsPariPlis() {
     <hr class="joueur-separateur" />
     `;
   }).join('');
+
+  configurerNavigationInputs('[id^="bet_"]');
+  configurerNavigationInputs('[id^="tricks_"]');
 
   // Synchronisation automatique des alliances (cases à cocher réciproques)
   for (let i = 0; i < etat.joueurs.length; i++) {
