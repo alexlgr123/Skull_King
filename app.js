@@ -83,6 +83,12 @@ function majJoueursDepuisChamp() {
     alert('Veuillez entrer 2 à 20 joueurs, séparés par des virgules.');
     return;
   }
+  const pseudosNormalises = liste.map(s => s.toLowerCase());
+  const doublons = pseudosNormalises.filter((s, i) => pseudosNormalises.indexOf(s) !== i);
+  if (doublons.length > 0) {
+    alert(`Les pseudos doivent être uniques. Doublon(s) détecté(s) : ${[...new Set(doublons)].join(', ')}`);
+    return;
+  }
   etat.joueurs = liste;
   etat.totaux = new Array(liste.length).fill(0);
   etat.manches = [];
