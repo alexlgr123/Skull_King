@@ -131,8 +131,8 @@ function majTableau() {
     // Colonne 0 : numéro de manche
     const details = document.createElement('td');
     details.innerHTML = affichageDoubleScores
-      ? `<span class="pill">${idx + 1}</span> <span class="pill">Total SK: ${totalMancheSkullKing}</span> <span class="pill">Total Rascal: ${totalMancheRascal}</span>`
-      : `<span class="pill">${idx + 1}</span> <span class="pill">Total manche: ${totalMancheActuelle}</span>`;
+      ? `<span class="pill">${idx + 1}</span> ${formaterPillScore('Total SK', totalMancheSkullKing, 'score-pill-total')} ${formaterPillScore('Total Rascal', totalMancheRascal, 'score-pill-total')}`
+      : `<span class="pill">${idx + 1}</span> ${formaterPillScore('Total manche', totalMancheActuelle, 'score-pill-total')}`;
     tr.appendChild(details);
     // Colonnes suivantes : score du joueur pour cette manche
     for (let i = 0; i < etat.joueurs.length; i++) {
@@ -163,8 +163,8 @@ function majTableau() {
         cumulsModeActuel[i] += scoreActuel;
       }
       const scoreInfo = affichageDoubleScores
-        ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span> <span class="pill">Cumul SK: ${cumulsSkullKing[i] > 0 ? '+' + cumulsSkullKing[i] : cumulsSkullKing[i]}</span> <span class="pill">Cumul Rascal: ${cumulsRascal[i] > 0 ? '+' + cumulsRascal[i] : cumulsRascal[i]}</span>`
-        : `<span class="pill">Score: ${scoreActuel > 0 ? '+' + scoreActuel : scoreActuel}</span> <span class="pill">Cumul: ${cumulsModeActuel[i] > 0 ? '+' + cumulsModeActuel[i] : cumulsModeActuel[i]}</span>`;
+        ? `${formaterPillScore('Skull King', scoresSkullKing[i], 'score-pill-skullking')} ${formaterPillScore('Rascal', scoresRascal[i], 'score-pill-rascal')} ${formaterPillScore('Cumul SK', cumulsSkullKing[i], 'score-pill-total')} ${formaterPillScore('Cumul Rascal', cumulsRascal[i], 'score-pill-total')}`
+        : `${formaterPillScore('Score', scoreActuel, 'score-pill-current')} ${formaterPillScore('Cumul', cumulsModeActuel[i], 'score-pill-total')}`;
       td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${bouletCanonInfo} ${allianceInfo} ${scoreInfo}`;
       tr.appendChild(td);
     }
@@ -399,6 +399,15 @@ function scoreBouletCanon(pari, plis) {
   return pari === plis ? 15 : 0;
 }
 
+function formaterPillScore(libelle, valeur, classeSupplementaire = '') {
+  const signe = valeur > 0 ? '+' : '';
+  const classes = ['pill', 'score-pill'];
+  if (classeSupplementaire) {
+    classes.push(classeSupplementaire);
+  }
+  return `<span class="${classes.join(' ')}">${libelle}: ${signe}${valeur}</span>`;
+}
+
 function normaliserDonneesScore(source) {
   const taille = etat.joueurs.length;
   const paris = Array.isArray(source.paris) ? source.paris.slice(0, taille) : [];
@@ -571,8 +580,8 @@ document.getElementById('calcBtn').addEventListener('click', () => {
     for (let i = 0; i < etat.joueurs.length; i++) {
       const td = document.createElement('td');
       const scoreInfo = affichageDoubleScores
-        ? `<span class="pill">Skull King: ${scoresSkullKing[i] > 0 ? '+' + scoresSkullKing[i] : scoresSkullKing[i]}</span> <span class="pill">Rascal: ${scoresRascal[i] > 0 ? '+' + scoresRascal[i] : scoresRascal[i]}</span>`
-        : `<span class="pill">Score: ${c.scores[i] > 0 ? '+' + c.scores[i] : c.scores[i]}</span>`;
+        ? `${formaterPillScore('Skull King', scoresSkullKing[i], 'score-pill-skullking')} ${formaterPillScore('Rascal', scoresRascal[i], 'score-pill-rascal')}`
+        : `${formaterPillScore('Score', c.scores[i], 'score-pill-current')}`;
       td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> ${scoreInfo}`;
       preview.appendChild(td);
     }

@@ -298,7 +298,34 @@
     font-size: 12px;
     margin-right: 6px;
   }
+  .score-pill {
+    border-color: rgba(255, 217, 107, 0.28);
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  .score-pill-current {
+    background: linear-gradient(180deg, #ffd96b 0%, #e7b93d 100%);
+    color: #241100;
+  }
+  .score-pill-total {
+    background: linear-gradient(180deg, #451514 0%, #2b0b0b 100%);
+    color: #ffe8ba;
+  }
+  .score-pill-skullking {
+    background: linear-gradient(180deg, #6c1c16 0%, #3b0d0c 100%);
+    color: #ffdca0;
+  }
+  .score-pill-rascal {
+    background: linear-gradient(180deg, #6a4120 0%, #311b0d 100%);
+    color: #ffe2ba;
+  }
   .scores-row { background: rgba(0,0,0,0.08); }
+  .scores-row td {
+    background: rgba(143, 42, 22, 0.16);
+  }
+  .scores-row .score-pill-current {
+    box-shadow: 0 0 0 1px rgba(255, 217, 107, 0.18) inset;
+  }
   .totals {
     margin-top: 8px;
     display: flex;
