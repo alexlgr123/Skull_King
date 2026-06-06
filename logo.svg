@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Skull King logo">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#f09b2b" />
+      <stop offset="58%" stop-color="#9c4b16" />
+      <stop offset="100%" stop-color="#4a1f11" />
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffe5a2" />
+      <stop offset="42%" stop-color="#f1bf50" />
+      <stop offset="100%" stop-color="#b46a16" />
+    </linearGradient>
+    <radialGradient id="skull" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#fff0c9" />
+      <stop offset="64%" stop-color="#c68b34" />
+      <stop offset="100%" stop-color="#5c2c12" />
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#120603" flood-opacity="0.55" />
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="28" fill="url(#bg)" />
+  <g opacity="0.28" stroke="#2a0f08" stroke-width="4">
+    <path d="M32 38L224 218" />
+    <path d="M224 38L32 218" />
+    <path d="M0 128H256" />
+    <path d="M128 0V256" />
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M84 68C84 48 100 34 128 34C156 34 172 48 172 68V74C184 81 194 95 194 112C194 134 184 145 172 152V173C172 186 165 196 154 202C147 215 137 222 128 222C119 222 109 215 102 202C91 196 84 186 84 173V152C72 145 62 134 62 112C62 95 72 81 84 74Z" fill="url(#skull)" stroke="#f4cf71" stroke-width="4" />
+    <path d="M90 71L74 40L91 44L103 28L112 49" fill="url(#gold)" stroke="#f4cf71" stroke-width="4" stroke-linejoin="round" />
+    <path d="M122 66L122 24L135 45L150 20L156 52" fill="url(#gold)" stroke="#f4cf71" stroke-width="4" stroke-linejoin="round" />
+    <path d="M162 70L173 36L184 54L198 45L190 77" fill="url(#gold)" stroke="#f4cf71" stroke-width="4" stroke-linejoin="round" />
+    <path d="M92 106C92 91 102 82 116 82C121 82 125 84 128 87C131 84 135 82 140 82C154 82 164 91 164 106C164 123 153 131 141 135C136 136 132 139 128 145C124 139 120 136 115 135C103 131 92 123 92 106Z" fill="#1a0b07" opacity="0.9" />
+    <ellipse cx="108" cy="108" rx="12" ry="15" fill="#0a0504" />
+    <ellipse cx="148" cy="108" rx="12" ry="15" fill="#0a0504" />
+    <path d="M127 124L120 140H136Z" fill="#0a0504" />
+    <path d="M104 156C114 150 142 150 152 156" fill="none" stroke="#0a0504" stroke-width="6" stroke-linecap="round" />
+    <g fill="#f4d7a1">
+      <path d="M99 173H104V189H99Z" />
+      <path d="M108 174H113V193H108Z" />
+      <path d="M117 175H122V195H117Z" />
+      <path d="M126 175H131V195H126Z" />
+      <path d="M135 175H140V193H135Z" />
+      <path d="M144 174H149V189H144Z" />
+    </g>
+    <path d="M86 67C97 61 112 59 128 59C144 59 159 61 170 67" fill="none" stroke="#6b3413" stroke-width="5" stroke-linecap="round" />
+  </g>
+</svg>
