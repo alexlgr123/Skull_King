@@ -15,7 +15,7 @@
     display: none;
   }
 
-    /* Tooltips avec délai de 2 secondes au survol */
+    /* Tooltips avec délai de 500 ms au survol */
     [data-tooltip] {
       position: relative;
     }
@@ -31,8 +31,7 @@
       border-radius: 8px;
       font-size: 13px;
       white-space: normal;
-      width: 400px;
-      max-width: 250px;
+      width: min(250px, calc(100vw - 24px));
       word-wrap: break-word;
       overflow-wrap: break-word;
       text-align: center;
@@ -206,6 +205,7 @@
   }
   select, input[type="number"], input[type="text"] {
     width: 100%;
+    box-sizing: border-box;
     padding: 10px;
     border-radius: 8px;
     border: 1px solid rgba(242, 200, 79, 0.22);
@@ -216,7 +216,7 @@
   }
   /* Champ de saisie pour les joueurs */
   #playersInput {
-    width: 94%;
+    width: 100%;
   }
   .row {
     display: grid;

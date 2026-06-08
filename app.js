@@ -5,8 +5,11 @@ const etat = {
   manches: []
 };
 
-let affichageDoubleScores = false;let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
-// --- Gestion des tooltips avec délai de 2 secondes ---
+let affichageDoubleScores = false;
+let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
+const TOOLTIP_DELAY_MS = 500;
+const TOOLTIP_ESTIMATED_WIDTH = 250;
+// --- Gestion des tooltips avec délai de 500 ms ---
 function initTooltips() {
   const elementsAvecTooltip = document.querySelectorAll('[data-tooltip]');
   elementsAvecTooltip.forEach(element => {
@@ -26,7 +29,7 @@ function initTooltips() {
         // Ajuster la position AVANT d'afficher le tooltip
         adjustTooltipPosition(this);
         this.classList.add('show-tooltip');
-      }, 500);
+      }, TOOLTIP_DELAY_MS);
     });
     
     element.addEventListener('mouseleave', function() {
@@ -50,7 +53,7 @@ function adjustTooltipPosition(element) {
   const elementWidth = rect.width;
   const elementLeft = rect.left;
   const elementCenter = elementLeft + elementWidth / 2;
-  const tooltipWidth = 400;
+  const tooltipWidth = TOOLTIP_ESTIMATED_WIDTH;
   const tooltipLeftEdge = elementCenter - tooltipWidth / 2;
   const tooltipRightEdge = elementCenter + tooltipWidth / 2;
   const windowWidth = window.innerWidth;
@@ -72,9 +75,11 @@ function adjustTooltipPosition(element) {
 // Initialiser les tooltips au chargement et à chaque modification DOM
 document.addEventListener('DOMContentLoaded', initTooltips);
 const observer = new MutationObserver(initTooltips);
-observer.observe(document.body, { childList: true, subtree: true });
+const dynamicTooltipRoot = document.getElementById('betsTricksFields');
+if (dynamicTooltipRoot) {
+  observer.observe(dynamicTooltipRoot, { childList: true, subtree: true });
+}
 
-// Met à jour la liste des joueurs à partir du champ texte
 // Met à jour la liste des joueurs à partir du champ texte
 function majJoueursDepuisChamp() {
   const brut = document.getElementById('playersInput').value.trim();
@@ -399,6 +404,45 @@ function scoreBouletCanon(pari, plis) {
   return pari === plis ? 15 : 0;
 }
 
+function calculerBonusAlliancesMutuelles(formData) {
+  const bonuses = new Array(formData.paris.length).fill(0);
+  const dejaCompte = new Set();
+
+  for (let i = 0; i < formData.paris.length; i++) {
+    if (!Array.isArray(formData.alliances[i])) {
+      continue;
+    }
+
+    formData.alliances[i].forEach(allyIdx => {
+      if (allyIdx === i) {
+        return;
+      }
+
+      const key = i < allyIdx ? `${i}-${allyIdx}` : `${allyIdx}-${i}`;
+      if (dejaCompte.has(key)) {
+        return;
+      }
+
+      if (Array.isArray(formData.alliances[allyIdx]) && formData.alliances[allyIdx].includes(i)) {
+        if (formData.paris[i] === formData.plis[i] && formData.paris[allyIdx] === formData.plis[allyIdx]) {
+          bonuses[i] += 20;
+          bonuses[allyIdx] += 20;
+          dejaCompte.add(key);
+        }
+      }
+    });
+  }
+
+  return bonuses;
+}
+
+function supprimerLigneApercu() {
+  const lastPreview = document.querySelector('.scores-row');
+  if (lastPreview) {
+    lastPreview.remove();
+  }
+}
+
 function formaterPillScore(libelle, valeur, classeSupplementaire = '') {
   const signe = valeur > 0 ? '+' : '';
   const classes = ['pill', 'score-pill'];
@@ -442,62 +486,17 @@ function normaliserDonneesScore(source) {
 function calculerScoresSelonMode(formData, mode, mancheNum) {
   const f = normaliserDonneesScore(formData);
   let scores;
-  let alliancesBonus = new Array(f.paris.length).fill(0);
+  let alliancesBonus = calculerBonusAlliancesMutuelles(f);
   let extraBetBonus = new Array(f.paris.length).fill(0);
 
   if (mode === 'skullking') {
     scores = f.paris.map((pari, i) => scoreSkullKing(pari, f.plis[i], mancheNum) + f.bonus[i]);
-    const dejaCompte = new Set();
-    for (let i = 0; i < f.paris.length; i++) {
-      if (!Array.isArray(f.alliances[i])) {
-        continue;
-      }
-      f.alliances[i].forEach(allyIdx => {
-        if (allyIdx === i) {
-          return;
-        }
-        const key = i < allyIdx ? `${i}-${allyIdx}` : `${allyIdx}-${i}`;
-        if (dejaCompte.has(key)) {
-          return;
-        }
-        if (Array.isArray(f.alliances[allyIdx]) && f.alliances[allyIdx].includes(i)) {
-          if (f.paris[i] === f.plis[i] && f.paris[allyIdx] === f.plis[allyIdx]) {
-            alliancesBonus[i] += 20;
-            alliancesBonus[allyIdx] += 20;
-            dejaCompte.add(key);
-          }
-        }
-      });
-    }
     for (let i = 0; i < f.paris.length; i++) {
       if (f.extraBets[i] > 0 && f.paris[i] === f.plis[i]) {
         extraBetBonus[i] = f.extraBets[i];
       }
     }
     return scores.map((s, i) => s + alliancesBonus[i] + extraBetBonus[i]);
-  }
-
-  const dejaCompte = new Set();
-  for (let i = 0; i < f.paris.length; i++) {
-    if (!Array.isArray(f.alliances[i])) {
-      continue;
-    }
-    f.alliances[i].forEach(allyIdx => {
-      if (allyIdx === i) {
-        return;
-      }
-      const key = i < allyIdx ? `${i}-${allyIdx}` : `${allyIdx}-${i}`;
-      if (dejaCompte.has(key)) {
-        return;
-      }
-      if (Array.isArray(f.alliances[allyIdx]) && f.alliances[allyIdx].includes(i)) {
-        if (f.paris[i] === f.plis[i] && f.paris[allyIdx] === f.plis[allyIdx]) {
-          alliancesBonus[i] += 20;
-          alliancesBonus[allyIdx] += 20;
-          dejaCompte.add(key);
-        }
-      }
-    });
   }
 
   scores = f.paris.map((pari, i) => {
@@ -526,7 +525,7 @@ function majRegleScore() {
   if (mode === 'skullking') {
     regle.textContent = "Si vous remportez le nombre exact de plis que vous avez annoncé, vous gagnez 20 points pour chaque pli réalisé. Si vous remportez plus ou moins de plis que prévu, vous perdez 10 points pour chaque pli de différence. Vous ne gagnez pas de points pour les plis réalisés pendant cette manche. Si votre mise est sur zéro et que vous ne remportez aucun pli, votre score est de 10 points multipliés par le nombre de cartes de cette manche.";
   } else {
-    regle.textContent = 'Prédiction correcte : 10 pts + 5 pts/plis. Sinon : -5 pts par écart. Boulet de canon : 15 pts si la prédiction est exacte, sinon 0 pt.';
+    regle.textContent = "Prédiction exacte : 10 points multipliés par le numéro de manche, plus bonus et bonus d'alliance. Avec 1 pli d'écart : moitié des points et moitié du bonus. Avec plus de 1 pli d'écart : 0 point. Boulet de canon : 15 points si la prédiction est exacte, sinon 0.";
   }
 }
 
@@ -586,10 +585,7 @@ document.getElementById('calcBtn').addEventListener('click', () => {
       preview.appendChild(td);
     }
     // Nettoie le dernier aperçu
-    const lastPreview = document.querySelector('.scores-row');
-    if (lastPreview) {
-      lastPreview.remove();
-    }
+    supprimerLigneApercu();
     tbody.prepend(preview);
   } catch (e) {
     alert(e.message);
@@ -615,10 +611,7 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
       scores: c.scores
     };
     // Supprime l'aperçu si présent
-    const lastPreview = document.querySelector('.scores-row');
-    if (lastPreview) {
-      lastPreview.remove();
-    }
+    supprimerLigneApercu();
     ajouterManche(manche);
     champsPariPlis(); // Met à jour la manche suivante
   } catch (e) {
