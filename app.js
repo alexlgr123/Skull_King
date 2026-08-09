@@ -429,37 +429,40 @@ function scoreBouletCanon(pari, plis, nbPlis, bonus, allianceBonus, PariFlambeur
 }
 
 function calculerBonusAlliancesMutuelles(formData) {
-  const bonuses = new Array(formData.paris.length).fill(0);
+  const bonus = new Array(formData.paris.length).fill(0);
   const dejaCompte = new Set();
 
+  // Parcourt chaque joueur pour vérifier les alliances mutuelles
   for (let i = 0; i < formData.paris.length; i++) {
     if (!Array.isArray(formData.alliances[i])) {
       continue;
     }
-
+// Parcourt les alliés du joueur i
     formData.alliances[i].forEach(allyIdx => {
       if (allyIdx === i) {
         return;
       }
-
+// Crée une clé unique pour chaque paire d'alliances afin d'éviter de compter deux fois
       const key = i < allyIdx ? `${i}-${allyIdx}` : `${allyIdx}-${i}`;
       if (dejaCompte.has(key)) {
         return;
       }
 
+      // Vérifie si l'alliance est mutuelle et si les paris sont exacts pour les deux joueurs
       if (Array.isArray(formData.alliances[allyIdx]) && formData.alliances[allyIdx].includes(i)) {
         if (formData.paris[i] === formData.plis[i] && formData.paris[allyIdx] === formData.plis[allyIdx]) {
-          bonuses[i] += 20;
-          bonuses[allyIdx] += 20;
+          bonus[i] += 20;
+          bonus[allyIdx] += 20;
           dejaCompte.add(key);
         }
       }
     });
   }
 
-  return bonuses;
+  return bonus;
 }
 
+// Supprime la dernière ligne d'aperçu des scores si elle existe
 function supprimerLigneApercu() {
   const lastPreview = document.querySelector('.scores-row');
   if (lastPreview) {
@@ -467,6 +470,7 @@ function supprimerLigneApercu() {
   }
 }
 
+// Formate un score sous forme de "pill" avec le libellé et la valeur
 function formaterPillScore(libelle, valeur, classeSupplementaire = '') {
   const signe = valeur > 0 ? '+' : '';
   const classes = ['pill', 'score-pill'];
@@ -476,6 +480,7 @@ function formaterPillScore(libelle, valeur, classeSupplementaire = '') {
   return `<span class="${classes.join(' ')}">${libelle}: ${signe}${valeur}</span>`;
 }
 
+// Normalise les données de score pour s'assurer que toutes les listes ont la même longueur que le nombre de joueurs
 function normaliserDonneesScore(source) {
   const taille = etat.joueurs.length;
   const paris = Array.isArray(source.paris) ? source.paris.slice(0, taille) : [];
@@ -575,6 +580,7 @@ document.getElementById('modeScore').addEventListener('change', () => {
   majRegleScore();
 });
 
+// Bouton pour basculer l'affichage des scores doubles (Skull King et Rascal)
 document.getElementById('dualScoresBtn').addEventListener('click', () => {
   affichageDoubleScores = !affichageDoubleScores;
   document.getElementById('dualScoresBtn').textContent = affichageDoubleScores
