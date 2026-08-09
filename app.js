@@ -5,11 +5,11 @@ const etat = {
   manches: []
 };
 
-let affichageDoubleScores = false;
+let affichageDoubleScores = false; // Indique si l'affichage des scores est en mode double (Skull King + Rascal) ou simple
 let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
-const TOOLTIP_DELAY_MS = 500;
-const TOOLTIP_ESTIMATED_WIDTH = 250;
-// --- Gestion des tooltips avec délai de 500 ms ---
+const TOOLTIP_DELAY_MS = 500; // Délai avant d'afficher le tooltip (en millisecondes)
+const TOOLTIP_ESTIMATED_WIDTH = 250; // Largeur estimée du tooltip pour le calcul de position
+// --- Gestion des tooltips avec délai de TOOLTIP_DELAY_MS (en millisecondes) ---
 function initTooltips() {
   const elementsAvecTooltip = document.querySelectorAll('[data-tooltip]');
   elementsAvecTooltip.forEach(element => {
@@ -80,22 +80,37 @@ if (dynamicTooltipRoot) {
   observer.observe(dynamicTooltipRoot, { childList: true, subtree: true });
 }
 
+// Normalise le nom d'un joueur : supprime les espaces et met la première lettre en majuscule
+function normaliserNomJoueur(nom) {
+  const texte = String(nom ?? '').trim();
+  if (!texte) {
+    return '';
+  }
+  return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
+// Normalise la liste des joueurs
+function normaliserListeJoueurs(liste) {
+  return liste.map(normaliserNomJoueur);
+}
+
 // Met à jour la liste des joueurs à partir du champ texte
 function majJoueursDepuisChamp() {
   const brut = document.getElementById('playersInput').value.trim();
   const liste = brut.split(',').map(s => s.trim()).filter(Boolean);
-  if (liste.length < 2 || liste.length > 20) {
-    alert('Veuillez entrer 2 à 20 joueurs, séparés par des virgules.');
+  if (liste.length < 2 || liste.length > 10) {
+    alert('Veuillez entrer 2 à 10 joueurs, séparés par des virgules.');
     return;
   }
-  const pseudosNormalises = liste.map(s => s.toLowerCase());
+  const joueursNormalises = normaliserListeJoueurs(liste);
+  const pseudosNormalises = joueursNormalises.map(s => s.toLowerCase());
   const doublons = pseudosNormalises.filter((s, i) => pseudosNormalises.indexOf(s) !== i);
   if (doublons.length > 0) {
     alert(`Les pseudos doivent être uniques. Doublon(s) détecté(s) : ${[...new Set(doublons)].join(', ')}`);
     return;
   }
-  etat.joueurs = liste;
-  etat.totaux = new Array(liste.length).fill(0);
+  etat.joueurs = joueursNormalises;
+  etat.totaux = new Array(joueursNormalises.length).fill(0);
   etat.manches = [];
   majEntetes();
   majTableau();
@@ -142,6 +157,7 @@ function majTableau() {
     // Colonnes suivantes : score du joueur pour cette manche
     for (let i = 0; i < etat.joueurs.length; i++) {
       const td = document.createElement('td');
+      // Affichage des alliances si présentes
       let allianceInfo = '';
       if (manche.alliances && Array.isArray(manche.alliances[i])) {
         allianceInfo = manche.alliances[i]
@@ -154,9 +170,10 @@ function majTableau() {
       if (manche.extraBets && typeof manche.extraBets[i] !== 'undefined' && manche.extraBets[i] > 0) {
         extraBetInfo = `<span class="pill">Pari supp.: ${manche.extraBets[i]}</span>`;
       }
-      let bouletCanonInfo = '';
-      if (manche.bouletCanon && manche.bouletCanon[i]) {
-        bouletCanonInfo = `<span class="pill">Boulet de canon</span>`;
+      // Affichage du mode Rascal si présent
+      let modeRascalInfo = '';
+      if (modeActuel === 'rascal' && manche.bouletCanon && typeof manche.bouletCanon[i] !== 'undefined') {
+        modeRascalInfo = `<span class="pill">Mode Rascal: ${manche.bouletCanon[i] ? 'Boulet de canon' : 'Chevrotine'}</span>`;
       }
       const scoreActuel = modeActuel === 'rascal'
         ? (scoresRascal ? scoresRascal[i] : manche.scores[i])
@@ -170,7 +187,7 @@ function majTableau() {
       const scoreInfo = affichageDoubleScores
         ? `${formaterPillScore('Skull King', scoresSkullKing[i], 'score-pill-skullking')} ${formaterPillScore('Rascal', scoresRascal[i], 'score-pill-rascal')} ${formaterPillScore('Cumul SK', cumulsSkullKing[i], 'score-pill-total')} ${formaterPillScore('Cumul Rascal', cumulsRascal[i], 'score-pill-total')}`
         : `${formaterPillScore('Score', scoreActuel, 'score-pill-current')} ${formaterPillScore('Cumul', cumulsModeActuel[i], 'score-pill-total')}`;
-      td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${bouletCanonInfo} ${allianceInfo} ${scoreInfo}`;
+      td.innerHTML = `<span class="pill">Pari: ${manche.paris[i]}</span> <span class="pill">Plis: ${manche.plis[i]}</span> <span class="pill">Bonus: ${manche.bonus && typeof manche.bonus[i] !== 'undefined' ? manche.bonus[i] : 0}</span> ${extraBetInfo} ${modeRascalInfo} ${allianceInfo} ${scoreInfo}`;
       tr.appendChild(td);
     }
     tbody.appendChild(tr);
@@ -226,12 +243,14 @@ function reinitialiserTout() {
   majTotaux();
 }
 
+// Sélectionne le texte d'un input après un délai pour éviter les conflits avec le focus
 function selectionnerValeurInput(input) {
   requestAnimationFrame(() => {
     input.select();
   });
 }
 
+// Configure la navigation entre les inputs avec Tab et Shift+Tab
 function configurerNavigationInputs(selecteur) {
   const inputs = Array.from(document.querySelectorAll(selecteur));
 
@@ -290,6 +309,7 @@ function champsPariPlis() {
         }
         return `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${idx}' id='alliance_${i}_${idx}' data-tooltip="Cochez pour former une alliance avec ${nom}" /> ${nom}</label>`;
       }).join('');
+      // Champs de saisie pour le pari, les plis remportés, le bonus, le pari supplémentaire et le mode Rascal
     return `
     <div class="row joueur-block">
       <div class="player-heading">${p}</div>
@@ -326,6 +346,8 @@ function champsPariPlis() {
 
   configurerNavigationInputs('[id^="bet_"]');
   configurerNavigationInputs('[id^="tricks_"]');
+  configurerNavigationInputs('[id^="bonus_"]');
+  configurerNavigationInputs('[id^="extra_bet_"]');
 
   // Synchronisation automatique des alliances (cases à cocher réciproques)
   for (let i = 0; i < etat.joueurs.length; i++) {
@@ -370,38 +392,40 @@ function lireFormulaire() {
 
 // Calcule le score Skull King pour un joueur en fonction du numéro de manche
 // Règle Skull King : Pari correct = 20 points/plis. Pari incorrect = -10 points par écart. Pari 0 et 0 plis = 10 points * numéro de manche.
-function scoreSkullKing(pari, plis, mancheNum) {
-  if (pari === 0 && plis === 0) {
-    return 10 * mancheNum;
+function scoreSkullKing(pari, plisrealises, nbplis, bonus, allianceBonus, PariFlambeur) {
+  if (pari === 0 && plisrealises === 0) {
+    return nbplis * 10 + bonus + allianceBonus + PariFlambeur;
   }
-  if (pari === plis) {
-    return 20 * plis;
+  if (pari === plisrealises) {
+    return plisrealises * 20 + bonus + allianceBonus + PariFlambeur;
   }
-  return -10 * Math.abs(pari - plis);
+  // Si le pari est incorrect, on calcule l'écart et on applique la pénalité
+  const ecart = Math.abs(pari - plisrealises);
+  return -10 * ecart + bonus;
 }
 
 // Calcule le score Rascal pour un joueur
-// Règle Rascal corrigée :
+// Règle Rascal :
 // - Prédiction exacte : 10 pts/plis + bonus
 // - 1 d'écart : moitié des points + moitié du bonus
 // - Plus de 1 d'écart : 0 point, pas de bonus
-function scoreRascal(pari, plis, nbPlis, bonus, allianceBonus) {
-  const scoreMax = 10 * nbPlis;
-  const ecart = Math.abs(pari - plis);
+function scoreRascalchevrotine(pari, plis, nbPlis, bonus, allianceBonus) {
+  const scoreChevrottine = 10 * nbPlis;
+  const ecart = Math.abs(pari - plis); // Écart entre le pari et le nombre de plis remportés
   if (ecart === 0) {
     // Mise exacte : bonus complet
-    return scoreMax + bonus + allianceBonus;
+    return scoreChevrottine + bonus + allianceBonus;
   }
   if (ecart === 1) {
     // 1 d'écart : moitié des points + moitié du bonus
-    return Math.floor(scoreMax / 2) + Math.floor(bonus / 2);
+    return Math.floor(scoreChevrottine / 2) + Math.floor(bonus / 2) + Math.floor(allianceBonus / 2);
   }
   // Plus de 1 d'écart : 0 point, pas de bonus
   return 0;
 }
 
-function scoreBouletCanon(pari, plis) {
-  return pari === plis ? 15 : 0;
+function scoreBouletCanon(pari, plis, nbPlis, bonus, allianceBonus) { // Calcule le score Boulet de canon pour un joueur
+  return pari === plis ? 15 * nbPlis + bonus + allianceBonus : 0; // Boulet de canon : 15 points multipliés par le nombre de plis si le pari est exact plus les bonus, sinon 0
 }
 
 function calculerBonusAlliancesMutuelles(formData) {
@@ -458,7 +482,7 @@ function normaliserDonneesScore(source) {
   const plis = Array.isArray(source.plis) ? source.plis.slice(0, taille) : [];
   const bonus = Array.isArray(source.bonus) ? source.bonus.slice(0, taille) : [];
   const alliances = Array.isArray(source.alliances) ? source.alliances.slice(0, taille) : [];
-  const extraBets = Array.isArray(source.extraBets) ? source.extraBets.slice(0, taille) : [];
+  const PariFlambeur = Array.isArray(source.extraBets) ? source.extraBets.slice(0, taille) : [];
   const bouletCanon = Array.isArray(source.bouletCanon) ? source.bouletCanon.slice(0, taille) : [];
 
   while (paris.length < taille) {
@@ -473,39 +497,42 @@ function normaliserDonneesScore(source) {
   while (alliances.length < taille) {
     alliances.push([]);
   }
-  while (extraBets.length < taille) {
-    extraBets.push(0);
+  while (PariFlambeur.length < taille) {
+    PariFlambeur.push(0);
   }
   while (bouletCanon.length < taille) {
     bouletCanon.push(false);
   }
 
-  return { paris, plis, bonus, alliances, extraBets, bouletCanon };
+  return { paris, plis, bonus, alliances, extraBets: PariFlambeur, bouletCanon };
 }
 
+// Calcule les scores selon le mode choisi (Skull King ou Rascal) pour la manche courante
 function calculerScoresSelonMode(formData, mode, mancheNum) {
   const f = normaliserDonneesScore(formData);
   let scores;
+  // Calcul du bonus d'alliance mutuelle pour chaque joueur
   let alliancesBonus = calculerBonusAlliancesMutuelles(f);
-  let extraBetBonus = new Array(f.paris.length).fill(0);
+  // Initialisation du tableau des bonus de pari supplémentaire pour chaque joueur
+  let PariFlambeur = new Array(f.paris.length).fill(0);
 
-  if (mode === 'skullking') {
-    scores = f.paris.map((pari, i) => scoreSkullKing(pari, f.plis[i], mancheNum) + f.bonus[i]);
-    for (let i = 0; i < f.paris.length; i++) {
-      if (f.extraBets[i] > 0 && f.paris[i] === f.plis[i]) {
-        extraBetBonus[i] = f.extraBets[i];
+  if (mode === 'skullking') { // Mode Skull King
+    scores = f.paris.map((pari, i) => scoreSkullKing(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i], PariFlambeur[i]));
+    for (let i = 0; i < f.paris.length; i++) { // Ajoute le bonus d'alliance et le bonus de pari supplémentaire
+      if (f.extraBets[i] > 0 && f.paris[i] === f.plis[i]) { // Si le pari est exact, ajoute le bonus de pari supplémentaire
+        PariFlambeur[i] = f.extraBets[i]; // Bonus de pari supplémentaire
       }
     }
-    return scores.map((s, i) => s + alliancesBonus[i] + extraBetBonus[i]);
+    return scores; // Les scores incluent déjà le bonus de pari supplémentaire
   }
-
-  scores = f.paris.map((pari, i) => {
-    if (f.bouletCanon[i]) {
-      return scoreBouletCanon(pari, f.plis[i]);
+// Mode Rascal
+  scores = f.paris.map((pari, i) => { // Calcule le score Rascal pour chaque joueur
+    if (f.bouletCanon[i]) { // Si le joueur a coché "Boulet de canon", calcule le score Boulet de canon
+      return scoreBouletCanon(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]); // Boulet de canon : 15 points multipliés par le nombre de plis si le pari est exact, sinon 0
     }
-    return scoreRascal(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]);
+    return scoreRascalchevrotine(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]); // Calcule le score Rascal pour chaque joueur
   });
-  return scores;
+  return scores; // Retourne les scores calculés pour chaque joueur
 }
 
 // Calcule les scores de la manche courante selon le mode choisi
@@ -514,7 +541,7 @@ function calculerScores() {
   const mode = document.getElementById('modeScore').value;
   const mancheNum = etat.manches.length + 1;
   const scores = calculerScoresSelonMode(f, mode, mancheNum);
-  return { paris: f.paris, plis: f.plis, bonus: f.bonus, alliances: f.alliances, extraBets: f.extraBets, scores };
+  return { paris: f.paris, plis: f.plis, bonus: f.bonus, alliances: f.alliances, extraBets: f.extraBets, bouletCanon: f.bouletCanon, scores };
 }
 
 // Met à jour la règle affichée selon le mode
@@ -525,7 +552,7 @@ function majRegleScore() {
   if (mode === 'skullking') {
     regle.textContent = "Si vous remportez le nombre exact de plis que vous avez annoncé, vous gagnez 20 points pour chaque pli réalisé. Si vous remportez plus ou moins de plis que prévu, vous perdez 10 points pour chaque pli de différence. Vous ne gagnez pas de points pour les plis réalisés pendant cette manche. Si votre mise est sur zéro et que vous ne remportez aucun pli, votre score est de 10 points multipliés par le nombre de cartes de cette manche.";
   } else {
-    regle.textContent = "Prédiction exacte : 10 points multipliés par le numéro de manche, plus bonus et bonus d'alliance. Avec 1 pli d'écart : moitié des points et moitié du bonus. Avec plus de 1 pli d'écart : 0 point. Boulet de canon : 15 points si la prédiction est exacte, sinon 0.";
+    regle.textContent = "Prédiction exacte : 10 points multipliés par le nombre de plis, plus bonus et bonus d'alliance. Avec 1 pli d'écart : moitié des points et moitié du bonus. Avec plus de 1 pli d'écart : 0 point. Boulet de canon : 15 points si la prédiction est exacte, sinon 0.";
   }
 }
 
@@ -578,10 +605,13 @@ document.getElementById('calcBtn').addEventListener('click', () => {
     preview.appendChild(td0);
     for (let i = 0; i < etat.joueurs.length; i++) {
       const td = document.createElement('td');
+      const modeRascalInfo = mode === 'rascal'
+        ? `<span class="pill">Mode Rascal: ${f.bouletCanon[i] ? 'Boulet de canon' : 'Chevrotine'}</span>`
+        : '';
       const scoreInfo = affichageDoubleScores
         ? `${formaterPillScore('Skull King', scoresSkullKing[i], 'score-pill-skullking')} ${formaterPillScore('Rascal', scoresRascal[i], 'score-pill-rascal')}`
         : `${formaterPillScore('Score', c.scores[i], 'score-pill-current')}`;
-      td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> ${scoreInfo}`;
+      td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> ${modeRascalInfo} ${scoreInfo}`;
       preview.appendChild(td);
     }
     // Nettoie le dernier aperçu
@@ -607,7 +637,7 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
       bonus: c.bonus,
       alliances: c.alliances,
       extraBets: c.extraBets,
-      bouletCanon: c.bouletCanon,
+      bouletCanon: c.bouletCanon || [],
       scores: c.scores
     };
     // Supprime l'aperçu si présent
@@ -667,7 +697,7 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
         alert('Fichier de partie invalide.');
         return;
       }
-      etat.joueurs = data.joueurs;
+      etat.joueurs = normaliserListeJoueurs(data.joueurs);
       etat.totaux = data.totaux;
       etat.manches = data.manches;
       document.body.dataset.mode = document.getElementById('modeScore').value;
