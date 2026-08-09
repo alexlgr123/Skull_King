@@ -401,7 +401,7 @@ function scoreSkullKing(pari, plisrealises, nbplis, bonus, allianceBonus, PariFl
   }
   // Si le pari est incorrect, on calcule l'écart et on applique la pénalité
   const ecart = Math.abs(pari - plisrealises);
-  return -10 * ecart + bonus;
+  return -10 * ecart + bonus - PariFlambeur; // Pénalité de 10 points par écart, bonus et alliance sont ajoutés
 }
 
 // Calcule le score Rascal pour un joueur
@@ -409,23 +409,23 @@ function scoreSkullKing(pari, plisrealises, nbplis, bonus, allianceBonus, PariFl
 // - Prédiction exacte : 10 pts/plis + bonus
 // - 1 d'écart : moitié des points + moitié du bonus
 // - Plus de 1 d'écart : 0 point, pas de bonus
-function scoreRascalchevrotine(pari, plis, nbPlis, bonus, allianceBonus) {
+function scoreRascalchevrotine(pari, plis, nbPlis, bonus, allianceBonus, PariFlambeur) {
   const scoreChevrottine = 10 * nbPlis;
   const ecart = Math.abs(pari - plis); // Écart entre le pari et le nombre de plis remportés
   if (ecart === 0) {
     // Mise exacte : bonus complet
-    return scoreChevrottine + bonus + allianceBonus;
+    return scoreChevrottine + bonus + allianceBonus + PariFlambeur;
   }
   if (ecart === 1) {
     // 1 d'écart : moitié des points + moitié du bonus
-    return Math.floor(scoreChevrottine / 2) + Math.floor(bonus / 2) + Math.floor(allianceBonus / 2);
+    return Math.floor(scoreChevrottine / 2) + Math.floor(bonus / 2) - PariFlambeur; // Pénalité de pari supplémentaire si le pari est incorrect
   }
   // Plus de 1 d'écart : 0 point, pas de bonus
-  return 0;
+  return 0 - PariFlambeur; // Pénalité de pari supplémentaire si le pari est incorrect
 }
 
-function scoreBouletCanon(pari, plis, nbPlis, bonus, allianceBonus) { // Calcule le score Boulet de canon pour un joueur
-  return pari === plis ? 15 * nbPlis + bonus + allianceBonus : 0; // Boulet de canon : 15 points multipliés par le nombre de plis si le pari est exact plus les bonus, sinon 0
+function scoreBouletCanon(pari, plis, nbPlis, bonus, allianceBonus, PariFlambeur) { // Calcule le score Boulet de canon pour un joueur
+  return pari === plis ? 15 * nbPlis + bonus + allianceBonus + PariFlambeur : 0 - PariFlambeur; // Boulet de canon : 15 points multipliés par le nombre de plis si le pari est exact plus les bonus, sinon 0
 }
 
 function calculerBonusAlliancesMutuelles(formData) {
@@ -528,9 +528,9 @@ function calculerScoresSelonMode(formData, mode, mancheNum) {
 // Mode Rascal
   scores = f.paris.map((pari, i) => { // Calcule le score Rascal pour chaque joueur
     if (f.bouletCanon[i]) { // Si le joueur a coché "Boulet de canon", calcule le score Boulet de canon
-      return scoreBouletCanon(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]); // Boulet de canon : 15 points multipliés par le nombre de plis si le pari est exact, sinon 0
+      return scoreBouletCanon(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i], f.extraBets[i]); // Boulet de canon : 15 points multipliés par le nombre de plis si le pari est exact, sinon 0
     }
-    return scoreRascalchevrotine(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i]); // Calcule le score Rascal pour chaque joueur
+    return scoreRascalchevrotine(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i], f.extraBets[i]); // Calcule le score Rascal pour chaque joueur
   });
   return scores; // Retourne les scores calculés pour chaque joueur
 }
