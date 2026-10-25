@@ -7,6 +7,7 @@ const etat = {
 
 let affichageDoubleScores = false; // Indique si l'affichage des scores est en mode double (Skull King + Rascal) ou simple
 let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
+let mancheEnEditionIndex = null; // Index de la manche en cours de modification (null = ajout d'une nouvelle manche)
 const TOOLTIP_DELAY_MS = 500; // Délai avant d'afficher le tooltip (en millisecondes)
 const TOOLTIP_ESTIMATED_WIDTH = 250; // Largeur estimée du tooltip pour le calcul de position
 // --- Gestion des tooltips avec délai de TOOLTIP_DELAY_MS (en millisecondes) ---
@@ -125,6 +126,19 @@ function majEntetes() {
   thead.innerHTML = '<th>Manche</th>' + etat.joueurs.map((p, i) => `<th id="thP${i + 1}">${p}</th>`).join('');
 }
 
+function numeroMancheFormulaire() {
+  return mancheEnEditionIndex === null ? etat.manches.length + 1 : mancheEnEditionIndex + 1;
+}
+
+function majEtatEditionInterface() {
+  const boutonAjouter = document.getElementById('addRowBtn');
+  const boutonAnnulerEdition = document.getElementById('cancelEditBtn');
+  const enEdition = mancheEnEditionIndex !== null;
+
+  boutonAjouter.textContent = enEdition ? 'Enregistrer la modification' : 'Ajouter la manche';
+  boutonAnnulerEdition.hidden = !enEdition;
+}
+
 // Met à jour le tableau des scores
 function majTableau() {
   const tbody = document.getElementById('tbody');
@@ -150,9 +164,10 @@ function majTableau() {
 
     // Colonne 0 : numéro de manche
     const details = document.createElement('td');
+    const boutonsManche = `<div class="round-actions"><button type="button" class="secondary round-edit-btn" data-round-edit="${idx}">Modifier</button></div>`;
     details.innerHTML = affichageDoubleScores
-      ? `<span class="pill">${idx + 1}</span> ${formaterPillScore('Total SK', totalMancheSkullKing, 'score-pill-total')} ${formaterPillScore('Total Rascal', totalMancheRascal, 'score-pill-total')}`
-      : `<span class="pill">${idx + 1}</span> ${formaterPillScore('Total manche', totalMancheActuelle, 'score-pill-total')}`;
+      ? `<span class="pill">${idx + 1}</span> ${formaterPillScore('Total SK', totalMancheSkullKing, 'score-pill-total')} ${formaterPillScore('Total Rascal', totalMancheRascal, 'score-pill-total')} ${boutonsManche}`
+      : `<span class="pill">${idx + 1}</span> ${formaterPillScore('Total manche', totalMancheActuelle, 'score-pill-total')} ${boutonsManche}`;
     tr.appendChild(details);
     // Colonnes suivantes : score du joueur pour cette manche
     for (let i = 0; i < etat.joueurs.length; i++) {
@@ -194,6 +209,28 @@ function majTableau() {
   }
 }
 
+function recalculerScoresEtTotaux(mode = document.getElementById('modeScore').value) {
+  etat.totaux = new Array(etat.joueurs.length).fill(0);
+
+  for (let idx = 0; idx < etat.manches.length; idx++) {
+    const manche = etat.manches[idx];
+    const donneesNormalisees = normaliserDonneesScore(manche);
+    const scores = calculerScoresSelonMode(donneesNormalisees, mode, idx + 1);
+
+    manche.paris = donneesNormalisees.paris;
+    manche.plis = donneesNormalisees.plis;
+    manche.bonus = donneesNormalisees.bonus;
+    manche.alliances = donneesNormalisees.alliances;
+    manche.extraBets = donneesNormalisees.extraBets;
+    manche.bouletCanon = donneesNormalisees.bouletCanon;
+    manche.scores = scores;
+
+    for (let i = 0; i < etat.totaux.length; i++) {
+      etat.totaux[i] += scores[i];
+    }
+  }
+}
+
 // Met à jour les totaux de chaque joueur
 function majTotaux() {
   const totalsWrap = document.getElementById('totals');
@@ -228,19 +265,67 @@ function majTotaux() {
 // Ajoute une manche au tableau
 function ajouterManche(manche) {
   etat.manches.push(manche);
-  for (let i = 0; i < etat.totaux.length; i++) {
-    etat.totaux[i] += manche.scores[i];
-  }
+  recalculerScoresEtTotaux();
+  majTableau();
+  majTotaux();
+}
+
+function modifierManche(index, manche) {
+  etat.manches[index] = manche;
+  recalculerScoresEtTotaux();
   majTableau();
   majTotaux();
 }
 
 // Réinitialise le tableau des scores
 function reinitialiserTout() {
+  mancheEnEditionIndex = null;
   etat.manches = [];
   etat.totaux = new Array(etat.joueurs.length).fill(0);
   majTableau();
   majTotaux();
+}
+
+function chargerManchePourEdition(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= etat.manches.length) {
+    return;
+  }
+  mancheEnEditionIndex = index;
+  champsPariPlis();
+  const manche = normaliserDonneesScore(etat.manches[index]);
+
+  for (let i = 0; i < etat.joueurs.length; i++) {
+    document.getElementById(`bet_${i}`).value = manche.paris[i];
+    document.getElementById(`tricks_${i}`).value = manche.plis[i];
+    document.getElementById(`bonus_${i}`).value = manche.bonus[i];
+    document.getElementById(`extra_bet_${i}`).value = manche.extraBets[i];
+    const bouletCanon = document.getElementById(`boulet_canon_${i}`);
+    if (bouletCanon) {
+      bouletCanon.checked = Boolean(manche.bouletCanon[i]);
+    }
+  }
+
+  document.querySelectorAll('.alliance-checkbox').forEach(cb => {
+    cb.checked = false;
+  });
+
+  for (let i = 0; i < etat.joueurs.length; i++) {
+    if (!Array.isArray(manche.alliances[i])) {
+      continue;
+    }
+    manche.alliances[i].forEach(allyIdx => {
+      const checkbox = document.getElementById(`alliance_${i}_${allyIdx}`);
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    });
+  }
+}
+
+function annulerEditionManche() {
+  mancheEnEditionIndex = null;
+  supprimerLigneApercu();
+  champsPariPlis();
 }
 
 // Sélectionne le texte d'un input après un délai pour éviter les conflits avec le focus
@@ -285,21 +370,25 @@ function configurerNavigationInputs(selecteur) {
 function champsPariPlis() {
   const container = document.getElementById('betsTricksFields');
   const mancheInfo = document.getElementById('mancheInfo');
-  const numManche = etat.manches.length + 1;
+  const numManche = numeroMancheFormulaire();
   const maxManches = 10;
   const nbPlis = numManche;
   const mode = document.getElementById('modeScore').value;
+  const enEdition = mancheEnEditionIndex !== null;
 
   document.body.dataset.mode = mode;
 
   // Affichage du numéro de manche et du nombre de plis
-  if (numManche > maxManches) {
+  if (!enEdition && numManche > maxManches) {
     mancheInfo.textContent = `Partie terminée (maximum ${maxManches} manches).`;
     container.innerHTML = '';
+    majEtatEditionInterface();
     return;
   }
 
-  mancheInfo.textContent = `Manche ${numManche} / ${maxManches} — ${nbPlis} pli${nbPlis > 1 ? 's' : ''}`;
+  mancheInfo.textContent = enEdition
+    ? `Modification de la manche ${numManche} / ${maxManches} — ${nbPlis} pli${nbPlis > 1 ? 's' : ''}`
+    : `Manche ${numManche} / ${maxManches} — ${nbPlis} pli${nbPlis > 1 ? 's' : ''}`;
   container.innerHTML = etat.joueurs.map((p, i) => {
     // Cases à cocher pour alliances multiples
     const checkboxes = etat.joueurs
@@ -367,6 +456,7 @@ function champsPariPlis() {
       });
     });
   }
+  majEtatEditionInterface();
 }
 
 // Lit les valeurs des champs pari/plis
@@ -544,7 +634,7 @@ function calculerScoresSelonMode(formData, mode, mancheNum) {
 function calculerScores() {
   const f = normaliserDonneesScore(lireFormulaire());
   const mode = document.getElementById('modeScore').value;
-  const mancheNum = etat.manches.length + 1;
+  const mancheNum = numeroMancheFormulaire();
   const scores = calculerScoresSelonMode(f, mode, mancheNum);
   return { paris: f.paris, plis: f.plis, bonus: f.bonus, alliances: f.alliances, extraBets: f.extraBets, bouletCanon: f.bouletCanon, scores };
 }
@@ -578,6 +668,10 @@ document.getElementById('playersInput').addEventListener('click', function() {
 document.getElementById('playersInput').addEventListener('change', majJoueursDepuisChamp);
 document.getElementById('modeScore').addEventListener('change', () => {
   majRegleScore();
+  recalculerScoresEtTotaux();
+  majTableau();
+  majTotaux();
+  champsPariPlis();
 });
 
 // Bouton pour basculer l'affichage des scores doubles (Skull King et Rascal)
@@ -595,7 +689,7 @@ document.getElementById('calcBtn').addEventListener('click', () => {
   try {
     const mode = document.getElementById('modeScore').value;
     const f = normaliserDonneesScore(lireFormulaire());
-    const mancheNum = etat.manches.length + 1;
+    const mancheNum = numeroMancheFormulaire();
     const c = {
       ...f,
       scores: calculerScoresSelonMode(f, mode, mancheNum)
@@ -632,7 +726,7 @@ document.getElementById('calcBtn').addEventListener('click', () => {
 document.getElementById('addRowBtn').addEventListener('click', () => {
   try {
     const maxManches = 10;
-    if (etat.manches.length >= maxManches) {
+    if (mancheEnEditionIndex === null && etat.manches.length >= maxManches) {
       alert(`Vous avez déjà joué les ${maxManches} manches.`);
       return;
     }
@@ -648,11 +742,31 @@ document.getElementById('addRowBtn').addEventListener('click', () => {
     };
     // Supprime l'aperçu si présent
     supprimerLigneApercu();
+    if (mancheEnEditionIndex !== null) {
+      modifierManche(mancheEnEditionIndex, manche);
+      annulerEditionManche();
+      return;
+    }
     ajouterManche(manche);
     champsPariPlis(); // Met à jour la manche suivante
   } catch (e) {
     alert(e.message);
   }
+});
+
+document.getElementById('cancelEditBtn').addEventListener('click', annulerEditionManche);
+
+document.getElementById('tbody').addEventListener('click', event => {
+  const boutonEdition = event.target.closest('[data-round-edit]');
+  if (!boutonEdition) {
+    return;
+  }
+  const index = Number(boutonEdition.dataset.roundEdit);
+  if (!Number.isInteger(index)) {
+    return;
+  }
+  supprimerLigneApercu();
+  chargerManchePourEdition(index);
 });
 
 // Réinitialise le tableau et les totaux
@@ -704,14 +818,15 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
         return;
       }
       etat.joueurs = normaliserListeJoueurs(data.joueurs);
-      etat.totaux = data.totaux;
       etat.manches = data.manches;
+      mancheEnEditionIndex = null;
       document.body.dataset.mode = document.getElementById('modeScore').value;
       // Restaure le mode de score si présent
       if (data.mode) {
         document.getElementById('modeScore').value = data.mode;
         majRegleScore();
       }
+      recalculerScoresEtTotaux();
       majEntetes();
       majTableau();
       majTotaux();
