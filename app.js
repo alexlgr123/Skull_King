@@ -8,6 +8,7 @@ const etat = {
 let affichageDoubleScores = false; // Indique si l'affichage des scores est en mode double (Skull King + Rascal) ou simple
 let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
 let mancheEnEditionIndex = null; // Index de la manche en cours de modification (null = ajout d'une nouvelle manche)
+const BARBE_GRISE_INDEX = -1;
 const TOOLTIP_DELAY_MS = 500; // Délai avant d'afficher le tooltip (en millisecondes)
 const TOOLTIP_ESTIMATED_WIDTH = 250; // Largeur estimée du tooltip pour le calcul de position
 // --- Gestion des tooltips avec délai de TOOLTIP_DELAY_MS (en millisecondes) ---
@@ -74,11 +75,13 @@ function adjustTooltipPosition(element) {
 }
 
 // Initialiser les tooltips au chargement et à chaque modification DOM
-document.addEventListener('DOMContentLoaded', initTooltips);
-const observer = new MutationObserver(initTooltips);
-const dynamicTooltipRoot = document.getElementById('betsTricksFields');
-if (dynamicTooltipRoot) {
-  observer.observe(dynamicTooltipRoot, { childList: true, subtree: true });
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', initTooltips);
+  const observer = new MutationObserver(initTooltips);
+  const dynamicTooltipRoot = document.getElementById('betsTricksFields');
+  if (dynamicTooltipRoot) {
+    observer.observe(dynamicTooltipRoot, { childList: true, subtree: true });
+  }
 }
 
 // Normalise le nom d'un joueur : supprime les espaces et met la première lettre en majuscule
@@ -176,8 +179,8 @@ function majTableau() {
       let allianceInfo = '';
       if (manche.alliances && Array.isArray(manche.alliances[i])) {
         allianceInfo = manche.alliances[i]
-          .filter(j => etat.joueurs[j])
-          .map(j => `<span class="pill alliance">Allié: ${etat.joueurs[j]}</span>`)
+          .filter(j => j === BARBE_GRISE_INDEX || etat.joueurs[j])
+          .map(j => `<span class="pill alliance">Allié: ${j === BARBE_GRISE_INDEX ? 'Barbe Grise' : etat.joueurs[j]}</span>`)
           .join(' ');
       }
       // Affichage du pari supplémentaire si > 0
@@ -391,13 +394,17 @@ function champsPariPlis() {
     : `Manche ${numManche} / ${maxManches} — ${nbPlis} pli${nbPlis > 1 ? 's' : ''}`;
   container.innerHTML = etat.joueurs.map((p, i) => {
     // Cases à cocher pour alliances multiples
-    const checkboxes = etat.joueurs
+    const checkboxesJoueurs = etat.joueurs
       .map((nom, idx) => {
         if (idx === i) {
           return '';
         }
         return `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${idx}' id='alliance_${i}_${idx}' data-tooltip="Cochez pour former une alliance avec ${nom}" /> ${nom}</label>`;
       }).join('');
+    const checkboxBarbeGrise = etat.joueurs.length === 2
+      ? `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${BARBE_GRISE_INDEX}' id='alliance_${i}_${BARBE_GRISE_INDEX}' data-tooltip="Cochez pour former une alliance avec Barbe Grise" /> Barbe Grise</label>`
+      : '';
+    const checkboxes = `${checkboxesJoueurs}${checkboxBarbeGrise}`;
       // Champs de saisie pour le pari, les plis remportés, le bonus, le pari supplémentaire et le mode Rascal
     return `
     <div class="row joueur-block">
@@ -444,6 +451,9 @@ function champsPariPlis() {
     checkboxes.forEach(cb => {
       cb.addEventListener('change', function () {
         const j = Number(cb.value);
+        if (j === BARBE_GRISE_INDEX) {
+          return;
+        }
         // Si on coche, on coche aussi la case réciproque
         const recip = document.getElementById(`alliance_${j}_${i}`);
         if (cb.checked) {
@@ -521,6 +531,20 @@ function scoreBouletCanon(pari, plis, nbPlis, bonus, allianceBonus, PariFlambeur
 function calculerBonusAlliancesMutuelles(formData) {
   const bonus = new Array(formData.paris.length).fill(0);
   const dejaCompte = new Set();
+
+  // Dans une partie à deux joueurs, Barbe Grise est un allié disponible.
+  // Elle rapporte 20 points à un joueur dont le pari est exact.
+  if (formData.paris.length === 2) {
+    for (let i = 0; i < formData.paris.length; i++) {
+      if (
+        Array.isArray(formData.alliances[i]) &&
+        formData.alliances[i].includes(BARBE_GRISE_INDEX) &&
+        formData.paris[i] === formData.plis[i]
+      ) {
+        bonus[i] += 20;
+      }
+    }
+  }
 
   // Parcourt chaque joueur pour vérifier les alliances mutuelles
   for (let i = 0; i < formData.paris.length; i++) {
@@ -612,12 +636,12 @@ function calculerScoresSelonMode(formData, mode, mancheNum) {
   let PariFlambeur = new Array(f.paris.length).fill(0);
 
   if (mode === 'skullking') { // Mode Skull King
-    scores = f.paris.map((pari, i) => scoreSkullKing(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i], PariFlambeur[i]));
     for (let i = 0; i < f.paris.length; i++) { // Ajoute le bonus d'alliance et le bonus de pari supplémentaire
       if (f.extraBets[i] > 0 && f.paris[i] === f.plis[i]) { // Si le pari est exact, ajoute le bonus de pari supplémentaire
         PariFlambeur[i] = f.extraBets[i]; // Bonus de pari supplémentaire
       }
     }
+    scores = f.paris.map((pari, i) => scoreSkullKing(pari, f.plis[i], mancheNum, f.bonus[i], alliancesBonus[i], PariFlambeur[i]));
     return scores; // Les scores incluent déjà le bonus de pari supplémentaire
   }
 // Mode Rascal
@@ -645,12 +669,15 @@ function majRegleScore() {
   const regle = document.getElementById('regleScore');
   document.body.dataset.mode = mode;
   if (mode === 'skullking') {
-    regle.textContent = "Si vous remportez le nombre exact de plis que vous avez annoncé, vous gagnez 20 points pour chaque pli réalisé. Si vous remportez plus ou moins de plis que prévu, vous perdez 10 points pour chaque pli de différence. Vous ne gagnez pas de points pour les plis réalisés pendant cette manche. Si votre mise est sur zéro et que vous ne remportez aucun pli, votre score est de 10 points multipliés par le nombre de cartes de cette manche.";
+    regle.textContent = "Si vous remportez le nombre exact de plis que vous avez annoncé, vous gagnez 20 points pour chaque pli réalisé. Si vous remportez plus ou moins de plis que prévu, vous perdez 10 points pour chaque pli de différence. Vous ne gagnez pas de points pour les plis réalisés pendant cette manche. Si votre mise est sur zéro et que vous ne remportez aucun pli, votre score est de 10 points multipliés par le nombre de cartes de cette manche." +
+      (etat.joueurs.length === 2 ? " À deux joueurs, une alliance avec Barbe Grise rapporte 20 points si votre pari est exact." : "");
   } else {
-    regle.textContent = "Prédiction exacte : 10 points multipliés par le nombre de plis, plus bonus et bonus d'alliance. Avec 1 pli d'écart : moitié des points et moitié du bonus. Avec plus de 1 pli d'écart : 0 point. Boulet de canon : 15 points si la prédiction est exacte, sinon 0.";
+    regle.textContent = "Prédiction exacte : 10 points multipliés par le nombre de plis, plus bonus et bonus d'alliance. Avec 1 pli d'écart : moitié des points et moitié du bonus. Avec plus de 1 pli d'écart : 0 point. Boulet de canon : 15 points si la prédiction est exacte, sinon 0." +
+      (etat.joueurs.length === 2 ? " À deux joueurs, une alliance avec Barbe Grise rapporte 20 points si votre pari est exact." : "");
   }
 }
 
+if (typeof document !== 'undefined') {
 // Initialisation
 majEntetes();
 majTotaux();
@@ -708,10 +735,14 @@ document.getElementById('calcBtn').addEventListener('click', () => {
       const modeRascalInfo = mode === 'rascal'
         ? `<span class="pill">Mode Rascal: ${f.bouletCanon[i] ? 'Boulet de canon' : 'Chevrotine'}</span>`
         : '';
+      const allianceInfo = f.alliances[i]
+        .filter(j => j === BARBE_GRISE_INDEX || etat.joueurs[j])
+        .map(j => `<span class="pill alliance">Allié: ${j === BARBE_GRISE_INDEX ? 'Barbe Grise' : etat.joueurs[j]}</span>`)
+        .join(' ');
       const scoreInfo = affichageDoubleScores
         ? `${formaterPillScore('Skull King', scoresSkullKing[i], 'score-pill-skullking')} ${formaterPillScore('Rascal', scoresRascal[i], 'score-pill-rascal')}`
         : `${formaterPillScore('Score', c.scores[i], 'score-pill-current')}`;
-      td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> ${modeRascalInfo} ${scoreInfo}`;
+      td.innerHTML = `<span class="pill">Pari: ${c.paris[i]}</span> <span class="pill">Plis: ${c.plis[i]}</span> <span class="pill">Bonus: ${c.bonus[i]}</span> ${modeRascalInfo} ${allianceInfo} ${scoreInfo}`;
       preview.appendChild(td);
     }
     // Nettoie le dernier aperçu
@@ -840,3 +871,15 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
   reader.readAsText(file);
   e.target.value = '';
 });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    etat,
+    BARBE_GRISE_INDEX,
+    calculerBonusAlliancesMutuelles,
+    calculerScoresSelonMode,
+    normaliserDonneesScore,
+    scoreSkullKing
+  };
+}
