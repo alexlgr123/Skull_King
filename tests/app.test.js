@@ -1,5 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const {
   etat,
@@ -72,4 +74,17 @@ test('Le pari flambeur exact est appliqué au score Skull King', () => {
 test('Le score Skull King conserve son calcul de base', () => {
   assert.equal(scoreSkullKing(0, 0, 3, 0, 0, 0), 30);
   assert.equal(scoreSkullKing(2, 2, 2, 0, 0, 0), 40);
+});
+
+test('La mise en page contraint le panneau d édition à sa colonne', () => {
+  const stylesheet = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+
+  assert.match(
+    stylesheet,
+    /\.app\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*380px\)\s+minmax\(0,\s*1fr\)/s
+  );
+  assert.match(stylesheet, /\.app > \*\s*\{[^}]*min-width:\s*0/s);
+  assert.match(stylesheet, /\.controls\s*\{[^}]*flex-wrap:\s*wrap/s);
+  assert.match(stylesheet, /\.controls button\s*\{[^}]*max-width:\s*100%/s);
+  assert.match(stylesheet, /\.table-wrap\s*\{[^}]*overflow-x:\s*auto/s);
 });

@@ -107,6 +107,9 @@
   .joueur-block {
     margin-bottom: 0;
   }
+  .joueur-block > * {
+    min-width: 0;
+  }
   .player-heading {
     grid-column: 1 / -1;
     font-size: 18px;
@@ -150,10 +153,13 @@
   }
   .app {
     display: grid;
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
     gap: 16px;
     padding: 16px;
     min-height: 100vh;
+  }
+  .app > * {
+    min-width: 0;
   }
   .panel {
     background:
@@ -196,6 +202,10 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 10px;
+    min-width: 0;
+  }
+  .grid > * {
+    min-width: 0;
   }
   label {
     font-size: 13px;
@@ -220,13 +230,19 @@
   }
   .row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
   }
   .controls {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     margin-top: 10px;
+    min-width: 0;
+  }
+  .controls button {
+    max-width: 100%;
+    white-space: normal;
   }
   button {
     padding: 10px 12px;
@@ -249,6 +265,7 @@
     box-shadow: 0 16px 38px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.03);
     padding: 16px;
     height: fit-content;
+    overflow-x: auto;
   }
   .header {
     display: flex;
