@@ -1,0 +1,7 @@
+{
+  "name": "skull-king-score-calculator",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/app.test.js"
+  }
+}
