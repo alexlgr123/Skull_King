@@ -3,30 +3,46 @@ const assert = require('node:assert/strict');
 
 const {
   etat,
-  BARBE_GRISE_INDEX,
+  ajouterBarbeGriseAuxJoueurs,
+  obtenirJoueursHumains,
   calculerBonusAlliancesMutuelles,
   calculerScoresSelonMode,
   scoreSkullKing
 } = require('../app.js');
 
-test('Barbe Grise rapporte 20 points si le pari du joueur est exact', () => {
-  const formData = {
-    paris: [2, 1],
-    plis: [2, 0],
-    alliances: [[BARBE_GRISE_INDEX], []]
-  };
-
-  assert.deepEqual(calculerBonusAlliancesMutuelles(formData), [20, 0]);
+test('Barbe Grise est ajoutee comme troisieme joueur dans une partie a deux humains', () => {
+  assert.deepEqual(
+    ajouterBarbeGriseAuxJoueurs(['Alice', 'Bob']),
+    ['Alice', 'Bob', 'Barbe Grise']
+  );
 });
 
-test('Barbe Grise ne rapporte aucun point si le pari du joueur est incorrect', () => {
+test('Barbe Grise n est pas ajoutee dans une partie a trois joueurs humains', () => {
+  assert.deepEqual(
+    ajouterBarbeGriseAuxJoueurs(['Alice', 'Bob', 'Charlie']),
+    ['Alice', 'Bob', 'Charlie']
+  );
+});
+
+test('La sauvegarde conserve uniquement les joueurs humains', () => {
+  assert.deepEqual(
+    obtenirJoueursHumains(['Alice', 'Bob', 'Barbe Grise']),
+    ['Alice', 'Bob']
+  );
+});
+
+test('Barbe Grise participe au calcul comme un joueur virtuel complet', () => {
+  etat.joueurs = ['Alice', 'Bob', 'Barbe Grise'];
   const formData = {
-    paris: [2, 1],
-    plis: [1, 1],
-    alliances: [[BARBE_GRISE_INDEX], []]
+    paris: [1, 0, 1],
+    plis: [1, 0, 1],
+    bonus: [0, 0, 0],
+    alliances: [[], [], []],
+    extraBets: [0, 0, 0],
+    bouletCanon: [false, false, false]
   };
 
-  assert.deepEqual(calculerBonusAlliancesMutuelles(formData), [0, 0]);
+  assert.deepEqual(calculerScoresSelonMode(formData, 'skullking', 2), [20, 20, 20]);
 });
 
 test('Les alliances normales restent réciproques et valent 20 points', () => {
