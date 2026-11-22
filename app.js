@@ -8,7 +8,6 @@ const etat = {
 let affichageDoubleScores = false; // Indique si l'affichage des scores est en mode double (Skull King + Rascal) ou simple
 let selectPlayersOnClick = true; // Flag pour sélectionner les joueurs au premier clic
 let mancheEnEditionIndex = null; // Index de la manche en cours de modification (null = ajout d'une nouvelle manche)
-const BARBE_GRISE_INDEX = -1;
 const TOOLTIP_DELAY_MS = 500; // Délai avant d'afficher le tooltip (en millisecondes)
 const TOOLTIP_ESTIMATED_WIDTH = 250; // Largeur estimée du tooltip pour le calcul de position
 // --- Gestion des tooltips avec délai de TOOLTIP_DELAY_MS (en millisecondes) ---
@@ -98,6 +97,26 @@ function normaliserListeJoueurs(liste) {
   return liste.map(normaliserNomJoueur);
 }
 
+function estBarbeGrise(nom) {
+  return String(nom ?? '').trim().toLowerCase() === 'barbe grise';
+}
+
+function obtenirJoueursHumains(joueurs) {
+  return normaliserListeJoueurs(joueurs.filter(nom => !estBarbeGrise(nom)));
+}
+
+function ajouterBarbeGriseAuxJoueurs(joueurs) {
+  const humains = obtenirJoueursHumains(joueurs);
+  if (humains.length === 2) {
+    return [...humains, 'Barbe Grise'];
+  }
+  return humains;
+}
+
+function estJoueurBarbeGrise(joueur) {
+  return estBarbeGrise(joueur);
+}
+
 // Met à jour la liste des joueurs à partir du champ texte
 function majJoueursDepuisChamp() {
   const brut = document.getElementById('playersInput').value.trim();
@@ -113,8 +132,8 @@ function majJoueursDepuisChamp() {
     alert(`Les pseudos doivent être uniques. Doublon(s) détecté(s) : ${[...new Set(doublons)].join(', ')}`);
     return;
   }
-  etat.joueurs = joueursNormalises;
-  etat.totaux = new Array(joueursNormalises.length).fill(0);
+  etat.joueurs = ajouterBarbeGriseAuxJoueurs(joueursNormalises);
+  etat.totaux = new Array(etat.joueurs.length).fill(0);
   etat.manches = [];
   majEntetes();
   majTableau();
@@ -179,8 +198,8 @@ function majTableau() {
       let allianceInfo = '';
       if (manche.alliances && Array.isArray(manche.alliances[i])) {
         allianceInfo = manche.alliances[i]
-          .filter(j => j === BARBE_GRISE_INDEX || etat.joueurs[j])
-          .map(j => `<span class="pill alliance">Allié: ${j === BARBE_GRISE_INDEX ? 'Barbe Grise' : etat.joueurs[j]}</span>`)
+          .filter(j => etat.joueurs[j])
+          .map(j => `<span class="pill alliance">Allié: ${etat.joueurs[j]}</span>`)
           .join(' ');
       }
       // Affichage du pari supplémentaire si > 0
@@ -394,21 +413,19 @@ function champsPariPlis() {
     : `Manche ${numManche} / ${maxManches} — ${nbPlis} pli${nbPlis > 1 ? 's' : ''}`;
   container.innerHTML = etat.joueurs.map((p, i) => {
     // Cases à cocher pour alliances multiples
-    const checkboxesJoueurs = etat.joueurs
+    const checkboxes = etat.joueurs
       .map((nom, idx) => {
         if (idx === i) {
           return '';
         }
         return `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${idx}' id='alliance_${i}_${idx}' data-tooltip="Cochez pour former une alliance avec ${nom}" /> ${nom}</label>`;
       }).join('');
-    const checkboxBarbeGrise = etat.joueurs.length === 2
-      ? `<label class='alliance-label'><input type='checkbox' class='alliance-checkbox' data-joueur='${i}' value='${BARBE_GRISE_INDEX}' id='alliance_${i}_${BARBE_GRISE_INDEX}' data-tooltip="Cochez pour former une alliance avec Barbe Grise" /> Barbe Grise</label>`
-      : '';
-    const checkboxes = `${checkboxesJoueurs}${checkboxBarbeGrise}`;
+    const joueurVirtuel = estJoueurBarbeGrise(p);
+    const enteteJoueur = joueurVirtuel ? `${p} (bot - ${nbPlis} carte${nbPlis > 1 ? 's' : ''})` : p;
       // Champs de saisie pour le pari, les plis remportés, le bonus, le pari supplémentaire et le mode Rascal
     return `
     <div class="row joueur-block">
-      <div class="player-heading">${p}</div>
+      <div class="player-heading">${enteteJoueur}</div>
       <div>
         <label for="bet_${i}">Pari</label>
         <input type="number" id="bet_${i}" min="0" max="${nbPlis}" value="0" class="input-small" data-tooltip="Annoncez le nombre de plis que vous allez remporter (de 0 à ${nbPlis})" />
@@ -451,9 +468,6 @@ function champsPariPlis() {
     checkboxes.forEach(cb => {
       cb.addEventListener('change', function () {
         const j = Number(cb.value);
-        if (j === BARBE_GRISE_INDEX) {
-          return;
-        }
         // Si on coche, on coche aussi la case réciproque
         const recip = document.getElementById(`alliance_${j}_${i}`);
         if (cb.checked) {
@@ -531,20 +545,6 @@ function scoreBouletCanon(pari, plis, nbPlis, bonus, allianceBonus, PariFlambeur
 function calculerBonusAlliancesMutuelles(formData) {
   const bonus = new Array(formData.paris.length).fill(0);
   const dejaCompte = new Set();
-
-  // Dans une partie à deux joueurs, Barbe Grise est un allié disponible.
-  // Elle rapporte 20 points à un joueur dont le pari est exact.
-  if (formData.paris.length === 2) {
-    for (let i = 0; i < formData.paris.length; i++) {
-      if (
-        Array.isArray(formData.alliances[i]) &&
-        formData.alliances[i].includes(BARBE_GRISE_INDEX) &&
-        formData.paris[i] === formData.plis[i]
-      ) {
-        bonus[i] += 20;
-      }
-    }
-  }
 
   // Parcourt chaque joueur pour vérifier les alliances mutuelles
   for (let i = 0; i < formData.paris.length; i++) {
@@ -670,10 +670,10 @@ function majRegleScore() {
   document.body.dataset.mode = mode;
   if (mode === 'skullking') {
     regle.textContent = "Si vous remportez le nombre exact de plis que vous avez annoncé, vous gagnez 20 points pour chaque pli réalisé. Si vous remportez plus ou moins de plis que prévu, vous perdez 10 points pour chaque pli de différence. Vous ne gagnez pas de points pour les plis réalisés pendant cette manche. Si votre mise est sur zéro et que vous ne remportez aucun pli, votre score est de 10 points multipliés par le nombre de cartes de cette manche." +
-      (etat.joueurs.length === 2 ? " À deux joueurs, une alliance avec Barbe Grise rapporte 20 points si votre pari est exact." : "");
+      (etat.joueurs.some(estJoueurBarbeGrise) ? " À deux joueurs humains, Barbe Grise est un joueur virtuel qui participe avec ses propres cartes, paris, plis et score." : "");
   } else {
     regle.textContent = "Prédiction exacte : 10 points multipliés par le nombre de plis, plus bonus et bonus d'alliance. Avec 1 pli d'écart : moitié des points et moitié du bonus. Avec plus de 1 pli d'écart : 0 point. Boulet de canon : 15 points si la prédiction est exacte, sinon 0." +
-      (etat.joueurs.length === 2 ? " À deux joueurs, une alliance avec Barbe Grise rapporte 20 points si votre pari est exact." : "");
+      (etat.joueurs.some(estJoueurBarbeGrise) ? " À deux joueurs humains, Barbe Grise est un joueur virtuel qui participe avec ses propres cartes, paris, plis et score." : "");
   }
 }
 
@@ -736,8 +736,8 @@ document.getElementById('calcBtn').addEventListener('click', () => {
         ? `<span class="pill">Mode Rascal: ${f.bouletCanon[i] ? 'Boulet de canon' : 'Chevrotine'}</span>`
         : '';
       const allianceInfo = f.alliances[i]
-        .filter(j => j === BARBE_GRISE_INDEX || etat.joueurs[j])
-        .map(j => `<span class="pill alliance">Allié: ${j === BARBE_GRISE_INDEX ? 'Barbe Grise' : etat.joueurs[j]}</span>`)
+        .filter(j => etat.joueurs[j])
+        .map(j => `<span class="pill alliance">Allié: ${etat.joueurs[j]}</span>`)
         .join(' ');
       const scoreInfo = affichageDoubleScores
         ? `${formaterPillScore('Skull King', scoresSkullKing[i], 'score-pill-skullking')} ${formaterPillScore('Rascal', scoresRascal[i], 'score-pill-rascal')}`
@@ -811,7 +811,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 // --- Sauvegarde et chargement de partie ---
 document.getElementById('saveBtn').addEventListener('click', () => {
   const data = {
-    joueurs: etat.joueurs,
+    joueurs: obtenirJoueursHumains(etat.joueurs),
     totaux: etat.totaux,
     manches: etat.manches,
     mode: document.getElementById('modeScore').value
@@ -848,7 +848,8 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
         alert('Fichier de partie invalide.');
         return;
       }
-      etat.joueurs = normaliserListeJoueurs(data.joueurs);
+      const joueursCharges = normaliserListeJoueurs(data.joueurs);
+      etat.joueurs = ajouterBarbeGriseAuxJoueurs(joueursCharges);
       etat.manches = data.manches;
       mancheEnEditionIndex = null;
       document.body.dataset.mode = document.getElementById('modeScore').value;
@@ -876,7 +877,10 @@ document.getElementById('loadInput').addEventListener('change', (e) => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     etat,
-    BARBE_GRISE_INDEX,
+    estBarbeGrise,
+    obtenirJoueursHumains,
+    ajouterBarbeGriseAuxJoueurs,
+    estJoueurBarbeGrise,
     calculerBonusAlliancesMutuelles,
     calculerScoresSelonMode,
     normaliserDonneesScore,
